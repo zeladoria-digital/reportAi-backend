@@ -1,0 +1,42 @@
+SPRINT 01 -------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+(Sessão e Segurança):
+Foco: Login e Autorização (Firebase Auth).
+Tarefas: Configurar os provedores de login (E-mail/Senha e Google). Criar as Security Rules iniciais no Firestore garantindo que apenas usuários logados possam escrever no banco, e que cidadãos só vejam seus próprios dados.
+Tarefas associadas: RF01, RF22, RNF06, RNF07.
+
+RF01: O sistema deve permitir que o cidadão realize cadastro e login (autenticação simplificada, ex: via Google/Firebase Auth).
+RF22: O sistema web deve possuir autenticação restrita para gestores públicos.
+RF06: O aplicativo deve possuir funcionamento offline-first, permitindo que o cidadão registre a ocorrência mesmo sem internet, salvando a foto e as coordenadas localmente para sincronização automática em background (segundo plano) quando houver rede Wi-Fi ou dados móveis.
+RF07: O sistema mobile deve extrair os metadados da foto (dados EXIF) no momento do clique, validando se a data de criação do arquivo bate com a data do envio, para evitar que o cidadão faça upload de fotos antigas baixadas da internet.
+
+
+Até então:
+Address (Endereço)
+Criação:
+(Implementado e testado) O endereço é criado e então pode ser designado a um ou mais usuários.
+
+Role (Papel)
+Criação:
+(Implementado e testado) Papeis podem ser criados. E neles, são definidas quais permissões teram no sistema.
+Atualização:
+(A testar) Papeis podem ser atualizados. Afinal de contas, um papel não tem funcionalidades fixas.
+
+User (Usuário)
+Cadastro:
+(Implementado e testado) O usuário pode se cadastrar. Cadastrar o seu endereço junto. Cadastra usuários comuns.
+(Implementado e testado) Criptografia nas senhas.
+(A implementar e testar) Solicitar senhas iguais duas vezes.
+(A implementar e testar) Login via Google e Firebase Auth.
+
+Login:
+(Implementado e testado) O usuário comum pode fazer o login no aplicativo mobile.
+(Implementado e a testar) Usuários com permissão podem realizar login no dashboard web.
+
+Atualizar dados:
+(Implementado e a testar) O usuário pode atualizar determinados campos após o cadastro. Não engloba dados sensivéis.
+(Implementado e a testar) O usuário pode atualizar a senha, em um período determinado (30 em 30 dias). Por questão de segurança, solicita a senha antiga.
+
+Atribuição de papeis:
+(Implementado e a testar) O admin pode designar papeis para usuarios comuns, que passam a ter determinadas permissões de acordo com as especificidades de cada um.
+
