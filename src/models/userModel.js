@@ -1,0 +1,277 @@
+// Acessar o firebase
+const { db } = require('../config/firebase')
+const bcrypt = require('bcrypt')
+
+const usersCollection = db.collection('users')
+
+const UserModel = {
+    async register(data){
+        // Antes de tudo, devemos verificar se o addressId e o role 'user' existem
+        if(data.addressId){
+            const addressDoc = await db.collection('address').doc(data.addressId).get()
+            if(!addressDoc.exists)
+                throw new Error('Endereço não encontrado')
+        }
+
+        const roleSnapshot = await db.collection('roles').where('slug', '==', 'user').get()
+        if(!roleSnapshot.empty) throw new Error('Papel "user" não existe')
+
+        // Depois, verificar se o CPF e o email já foram cadastrados
+        const emailSnapshot = await usersCollection.where('email', '==', data.email).get()
+        if(!emailSnapshot.empty) throw new Error('Email já cadastrado')
+
+        const cpfSnapshot = await usersCollection.where('cpf', '==', data.cpf).get()
+        if(!cpfSnapshot.empty) throw new Error('CPF já cadastrado')
+
+        const defaultRole = roleSnapshot.docs[0]
+        const id = await getNextId('users')
+
+        // Senha criptografada
+        const hashedPassword = await bcrypt.hash(data.password, 10)
+
+        const doc = await usersCollection.add({
+            // Dados pessoais
+            name: data.name,
+            cpf: data.cpf,
+            dateOfBirth: data.dateOfBirth,
+            phoneNumber: data.phoneNumber,
+            // Há contextos em que o endereço são compartilhados, portanto o addressId é ideal.
+            addressId: data.addressId,
+
+            // Dados para autenticação
+            email: data.email,
+            password: hashedPassword,
+
+            // Level inicial é 'cooper'
+            level: 'cooper',
+            agreeLgpdTerms: data.agreeLgpdTerms,
+            status: 'active', 
+
+            // Cada usuário terá um ou mais papel. 
+            // No contexto do cadastro, o registro sempre definirá o papel de 'user'
+            roleIds: [defaultRole.id],
+
+            createAt: new Date()
+        })
+        // Remove senha do retorno
+        const { password, ...dataWithoutPassword } = data
+        return { id, ...dataWithoutPassword, roleIds: [defaultRole.id], status: 'active' }
+    },
+
+     async update(id, data) {
+        const user = await usersCollection.doc(id).get()
+        if(!user.exists) throw new Error('Usuário não existe')
+
+        if (data.password) {
+        data.password = await bcrypt.hash(data.password, 10) // Criptografa se vier no update
+        }
+
+        await usersCollection.doc(id).update(data)
+
+        const { password, ...dataWithoutPassword } = data // Remove senha do retorno
+        return { id, ...dataWithoutPassword }
+    },
+
+    async getAll() {
+        const snapshot = await usersCollection.get()
+
+        if(snapshot.empty) return null
+
+        return snapshot.docs.map(doc => {
+        const { password, cpf,  ...data } = doc.data() // Remove cpf e senha do retorno
+        return { id: doc.id, ...data }
+        })
+    },
+
+    async getById(id) {
+        const userDoc = await usersCollection.doc(id).get()
+        if (!userDoc.exists) return null
+
+        const { password, ...data } = userDoc.data() // Remove senha do retorno
+        const user = { id: userDoc.id, ...data }
+
+        if (user.addressId) {
+        const addressDoc = await db.collection('address').doc(String(user.addressId)).get()
+        user.address = { id: addressDoc.id, ...addressDoc.data() }
+        delete user.addressId
+        }
+
+        return user
+    },
+
+    async delete(id) {
+        const user = await usersCollection.doc(id).get()
+
+        if(!user.exists) throw new Error('Usuário não existente')
+        
+        await usersCollection.doc(id).delete()
+        return { id }
+    },
+
+    // Login na plataforma mobile -> Qualquer papel (role) pode acessar
+    async login(email, password) {
+        const snapshot = await usersCollection
+            .where('email', '==', email)
+            .get()
+
+        if (snapshot.empty) throw new Error('E-mail ou senha inválidos')
+
+        const userDoc = snapshot.docs[0]
+        const user = { id: userDoc.id, ...userDoc.data() }
+
+        const isPasswordValid = await bcrypt.compare(password, user.password)
+        if (!isPasswordValid) throw new Error('E-mail ou senha inválidos')
+
+        if(user.status !== 'active') throw new Error('Usuário inativo. Entre em contato com o suporte')
+
+        const { password: _, ...userWithoutPassword } = user
+        return userWithoutPassword
+    },
+
+    // Login no dashboard
+    async loginDashboard(email, password) {
+        const snapshot = await usersCollection
+            .where('email', '==', email)
+            .get()
+        
+        if (snapshot.empty) throw new Error('E-mail ou senha inválidos')
+        
+        const userDoc = snapshot.docs[0]
+        const user = { id: userDoc.id, ...userDoc.data() }
+
+        const isPasswordValid = await bcrypt.compare(password, user.password)
+        if(!isPasswordValid) throw new Error('E-mail ou senha inválidos')
+
+        if(user.status !== 'active') throw new Error('Usuário inativo. Entre em contato com o suporte')
+        
+        const roles = await Promise.all(
+            user.roleIds.map(async (roleId) => {
+                const roleDoc = await db.collection('roles').doc(roleId).get()
+                return roleDoc.exists ? { id: roleDoc.id, ...roleDoc.data() } : null
+            })
+        )
+
+        const allowedSlugs = ['public_manager', 'admin', 'superadmin']
+        const hasDashboardAccess = roles.some(role => allowedSlugs.includes(role?.slug))
+
+        if(!hasDashboardAccess) throw new Error('Acesso negado. Você não tem permissão para acessar o dashboard')
+
+        const { password: _, ...userWithoutPassword } = user
+        return { ...userWithoutPassword, roles }
+    },
+
+    async changePassword(id, currentPassword, newPassword) {
+        const userDoc = await usersCollection.doc(id).get()
+        if (!userDoc.exists) throw new Error('Usuário não encontrado')
+
+        const user = userDoc.data()
+
+        // Verifica se já passou 1 mês desde a última alteração
+        if (user.passwordChangedAt) {
+            const lastChange = user.passwordChangedAt.toDate()
+            const oneMonthAgo = new Date()
+            oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
+
+            if (lastChange > oneMonthAgo) {
+            const nextAllowedDate = new Date(lastChange)
+            nextAllowedDate.setMonth(nextAllowedDate.getMonth() + 1)
+
+            throw new Error(
+                `Senha só pode ser alterada após ${nextAllowedDate.toLocaleDateString('pt-BR')}`
+            )
+            }
+        }
+
+        // Verifica se a senha atual está correta
+        const isPasswordValid = await bcrypt.compare(currentPassword, user.password)
+
+        if (!isPasswordValid) {
+            throw new Error('Senha atual incorreta')
+        }
+
+        // Verifica se a nova senha é diferente da atual
+        const isSamePassword = await bcrypt.compare(newPassword, user.password)
+
+        if (isSamePassword) {
+            throw new Error('A nova senha deve ser diferente da senha atual')
+        }
+
+        // Criptografa e salva a nova senha
+        const hashedPassword = await bcrypt.hash(newPassword, 10)
+
+        await usersCollection.doc(id).update({
+            password: hashedPassword,
+            passwordChangedAt: new Date(),
+        })
+
+        return { message: 'Senha alterada com sucesso' }
+    },
+
+    async updateRoles(adminId, targetUserId, roleIds) {
+        // Verifica se o admin existe e tem permissão
+        const adminDoc = await usersCollection.doc(adminId).get()
+
+        if (!adminDoc.exists) {
+            throw new Error('Administrador não encontrado')
+        }
+
+        const admin = adminDoc.data()
+
+        // Busca os papéis do admin e verifica se tem permissão
+        const adminRoles = await Promise.all(
+            admin.roleIds.map(async (roleId) => {
+            const roleDoc = await db.collection('roles').doc(roleId).get()
+            return roleDoc.exists ? roleDoc.data() : null
+            })
+        )
+
+        const hasPermission = adminRoles.some(role =>
+            role?.permissions?.includes('manage_roles')
+        )
+
+        if (!hasPermission) {
+            throw new Error('Você não tem permissão para gerenciar papéis')
+        }
+
+        // Verifica se o usuário alvo existe
+        const targetDoc = await usersCollection.doc(String(targetUserId)).get()
+
+        if (!targetDoc.exists) {
+            throw new Error('Usuário não encontrado')
+        }
+
+        // Verifica se todos os roleIds existem
+        for (const roleId of roleIds) {
+            const roleDoc = await db.collection('roles').doc(String(roleId)).get()
+            if (!roleDoc.exists) {
+            throw new Error(`Papel com id '${roleId}' não encontrado`)
+            }
+        }
+
+        // Garante que o papel 'user' sempre está na lista
+        const userRoleSnapshot = await db.collection('roles')
+            .where('slug', '==', 'user')
+            .get()
+
+        const defaultRoleId = userRoleSnapshot.docs[0].id
+
+        const finalRoleIds = roleIds.includes(defaultRoleId)
+            ? roleIds
+            : [defaultRoleId, ...roleIds] // ← sempre mantém o papel user
+
+        // Atualiza os papéis
+        await usersCollection.doc(String(targetUserId)).update({
+            roleIds: finalRoleIds,
+            rolesUpdatedAt: new Date(),
+            rolesUpdatedBy: adminId,
+        })
+
+        return {
+            message: 'Papéis atualizados com sucesso',
+            userId: targetUserId,
+            roleIds: finalRoleIds,
+        }
+    },
+}
+
+module.exports = UserModel

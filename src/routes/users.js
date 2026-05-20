@@ -1,0 +1,126 @@
+const express = require('express')
+const router = express.Router()
+const UserModel = require('../models/userModel')
+const validate = require('../middlewares/validate')
+const jwt = require('jsonwebtoken')
+const { registerUserSchema, updateUserSchema, loginSchema, changePasswordSchema, updateRolesSchema } = require('../validators/userValidator')
+
+router.get('/', async(request, response) => {
+    try {
+        const user = await UserModel.getAll()
+        response.json(user)
+    } catch (error) {
+        response.status(500).json({ error: error.message })
+    }
+})
+
+router.post('/login', validate(loginSchema), async(request, response) => {
+  try {
+    const { email, password } = request.body
+
+    // Valida as credenciais
+    const user = await UserModel.login(email, password)
+
+    // Gera o token JWT
+    const token = jwt.sign(
+      {
+        id: user.id,
+        email: user.email,
+        level: user.level,
+      },
+      process.env.JWT_SECRET,
+      { expiresIn: '8h' } // token expira em 8 horas
+    )
+
+    // Retorna o usuário e o token
+    response.status(200).json({ user, token })
+
+  } catch (error) {
+    response.status(401).json({ error: error.message })
+  }
+})
+
+router.post('/login/dashboard', validate(loginSchema), async(request, response) => {
+  try {
+    const { email, password } = request.body
+
+    const user = await UserModel.loginDashboard(email, password)
+
+    const token = jwt.sign(
+      { id: user.id, email: user.email, roleIds: user.roleIds },
+      process.env.JWT_SECRET,
+      { expiresIn: '8h' }
+    )
+
+    response.status(200).json({ user, token })
+  } catch (error) {
+    response.status(401).json({ error: error.message })
+  }
+})
+
+router.post('/register', validate(registerUserSchema), async(request, response) => {
+    try {
+        const users = await UserModel.register(request.body)
+        response.status(200).json(users)
+    } catch (error) {
+        response.status(500).json({ error: error.message })
+    }
+})
+
+router.get('/:id', async(request, response) => {
+    try {
+        const users = await UserModel.getById(request.params.id)
+        response.json(users)
+    } catch (error) {
+        response.status(500).json({ error: error.message })
+    }
+})
+
+router.delete('/:id', async(request, response) => {
+    try {
+        await UserModel.delete(request.params.id)
+        response.json({ message: 'Usuário deletado com sucesso' })
+    } catch (error) {
+        response.status(500).json({ error: error.message })
+    }
+})
+
+// Mudar dados mais flexíveis - Usuário mudando dados de perfil
+router.patch('/:id', validate(updateUserSchema), async(request, response) => {
+    try {
+        const result = await UserModel.update(request.params.id, request.body)
+
+        response.status(200).json(result)
+    } catch (error) {
+        response.status(400).json({ error: error.message })
+    }
+})
+
+router.put('/:id/change-password', validate(changePasswordSchema), async(request, response) => {
+    try {
+        const { currentPassword, newPassword } = request.body
+        const result = await UserModel.changePassword(request.params.id, currentPassword, newPassword)
+
+        response.status(200).json(result)
+    } catch (error) {
+        response.status(400).json({ error: error.message })
+    }
+})
+
+router.patch('/:id/roles', validate(updateRolesSchema), async(request, response) => {
+  try {
+    const { adminId, roleIds } = request.body
+
+    const result = await UserModel.updateRoles(
+      adminId,
+      request.params.id,
+      roleIds
+    )
+
+    response.status(200).json(result)
+  } catch (error) {
+    response.status(403).json({ error: error.message })
+  }
+})
+
+module.exports = router
