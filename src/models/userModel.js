@@ -6,14 +6,17 @@ const usersCollection = db.collection('users')
 
 const UserModel = {
     async register(data){
-        // Antes de tudo, verificamos se o CPF e o email já foram cadastrados
+        // Antes de tudo, garantir que o usuário aceitou os termos LGPD. Isso é fundamental para a conformidade legal e para proteger a privacidade dos usuários. Se o campo 'agreeLgpdTerms' não for verdadeiro, lançamos um erro imediatamente, impedindo o cadastro.
+        if(!data.agreeLgpdTerms) throw new Error('É necessário aceitar os termos LGPD')
+
+        // Verificar se email e cpf já existem
         const emailSnapshot = await usersCollection.where('email', '==', data.email).get()
         if(!emailSnapshot.empty) throw new Error('Email já cadastrado')
 
         const cpfSnapshot = await usersCollection.where('cpf', '==', data.cpf).get()
         if(!cpfSnapshot.empty) throw new Error('CPF já cadastrado')
 
-        // Depois, devemos verificar se o addressId e o role 'user' existem
+        // Verificar se o addressId e o role 'user' existem
         if(data.addressId){
             const addressDoc = await db.collection('address').doc(data.addressId).get()
             if(!addressDoc.exists)
