@@ -6,25 +6,25 @@ const usersCollection = db.collection('users')
 
 const UserModel = {
     async register(data){
-        // Antes de tudo, devemos verificar se o addressId e o role 'user' existem
-        if(data.addressId){
-            const addressDoc = await db.collection('address').doc(data.addressId).get()
-            if(!addressDoc.exists)
-                throw new Error('Endereço não encontrado')
-        }
-
-        const roleSnapshot = await db.collection('roles').where('slug', '==', 'user').get()
-        if(!roleSnapshot.empty) throw new Error('Papel "user" não existe')
-
-        // Depois, verificar se o CPF e o email já foram cadastrados
+        // Antes de tudo, verificamos se o CPF e o email já foram cadastrados
         const emailSnapshot = await usersCollection.where('email', '==', data.email).get()
         if(!emailSnapshot.empty) throw new Error('Email já cadastrado')
 
         const cpfSnapshot = await usersCollection.where('cpf', '==', data.cpf).get()
         if(!cpfSnapshot.empty) throw new Error('CPF já cadastrado')
 
+        // Depois, devemos verificar se o addressId e o role 'user' existem
+        if(data.addressId){
+            const addressDoc = await db.collection('address').doc(data.addressId).get()
+            if(!addressDoc.exists)
+                throw new Error('Endereço não encontrado')
+        }
+
+        // Garantir que o papel 'user' exista
+        const roleSnapshot = await db.collection('roles').where('slug', '==', 'users').get()
+        if(roleSnapshot.empty) throw new Error('Papel "user" não existe')
+
         const defaultRole = roleSnapshot.docs[0]
-        const id = await getNextId('users')
 
         // Senha criptografada
         const hashedPassword = await bcrypt.hash(data.password, 10)
@@ -51,11 +51,11 @@ const UserModel = {
             // No contexto do cadastro, o registro sempre definirá o papel de 'user'
             roleIds: [defaultRole.id],
 
-            createAt: new Date()
+            createdAt: new Date()
         })
         // Remove senha do retorno
         const { password, ...dataWithoutPassword } = data
-        return { id, ...dataWithoutPassword, roleIds: [defaultRole.id], status: 'active' }
+        return { id: doc.id, ...dataWithoutPassword, roleIds: [defaultRole.id], status: 'active' }
     },
 
      async update(id, data) {
@@ -79,7 +79,7 @@ const UserModel = {
 
         return snapshot.docs.map(doc => {
         const { password, cpf,  ...data } = doc.data() // Remove cpf e senha do retorno
-        return { id: doc.id, ...data }
+        return { id: doc.id, ...data, createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : null }
         })
     },
 
@@ -88,7 +88,7 @@ const UserModel = {
         if (!userDoc.exists) return null
 
         const { password, ...data } = userDoc.data() // Remove senha do retorno
-        const user = { id: userDoc.id, ...data }
+        const user = { id: userDoc.id, ...data, createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : null }
 
         if (user.addressId) {
         const addressDoc = await db.collection('address').doc(String(user.addressId)).get()

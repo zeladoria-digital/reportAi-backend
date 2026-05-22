@@ -10,6 +10,8 @@ const AddressModel = {
             neighborhood: data.neighborhood,
             road: data.road,
             houseNumber: data.houseNumber,
+
+            createdAt: new Date()
         })
         return { id: doc.id, ...data };
     }
