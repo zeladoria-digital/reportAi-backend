@@ -65,6 +65,12 @@ const UserModel = {
         const user = await usersCollection.doc(id).get()
         if(!user.exists) throw new Error('Usuário não existe')
 
+        if(data.addressId){
+            const addressDoc = await db.collection('address').doc(data.addressId).get()
+            if(!addressDoc.exists)
+                throw new Error('Endereço não encontrado')
+        }
+
         if (data.password) {
         data.password = await bcrypt.hash(data.password, 10) // Criptografa se vier no update
         }

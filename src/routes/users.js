@@ -4,8 +4,10 @@ const UserModel = require('../models/userModel')
 const validate = require('../middlewares/validate')
 const jwt = require('jsonwebtoken')
 const { registerUserSchema, updateUserSchema, loginSchema, changePasswordSchema, updateRolesSchema } = require('../validators/userValidator')
+const authMiddleware = require('../middlewares/auth')
+const isGestor = require('../middlewares/isGestor')
 
-router.get('/', async(request, response) => {
+router.get('/', authMiddleware, isGestor,  async(request, response) => {
     try {
         const user = await UserModel.getAll()
         response.json(user)
@@ -67,17 +69,42 @@ router.post('/register', validate(registerUserSchema), async(request, response) 
     }
 })
 
-router.get('/:id', async(request, response) => {
+router.get('/:id', authMiddleware, async(request, response) => {
     try {
-        const users = await UserModel.getById(request.params.id)
-        response.json(users)
+      // Busca os papéis do usuário logado
+      const roles = await Promise.all(
+        request.userRoleIds.map(async (roleId) => {
+          const roleDoc = await db.collection('roles').doc(roleId).get()
+          return roleDoc.exists ? roleDoc.data() : null
+        })
+      )
+
+      const isAdminOrGestor = roles.some(role =>
+        ['gestor', 'admin', 'superadmin'].includes(role?.slug)
+      )
+
+      // Admin/gestor pode ver qualquer usuário, o resto só o próprio
+      if (!isAdminOrGestor && request.userId !== request.params.id) {
+        return response.status(403).json({ error: 'Você não tem permissão para visualizar este usuário' })
+      }
+
+      const user = await UserModel.getById(request.params.id)
+
+      if (!user) {
+        return response.status(404).json({ error: 'Usuário não encontrado' })
+      }
+
+      response.json(user)
     } catch (error) {
         response.status(500).json({ error: error.message })
     }
 })
 
-router.delete('/:id', async(request, response) => {
+router.delete('/:id', authMiddleware, async(request, response) => {
     try {
+        if (request.userId !== request.params.id)
+          return response.status(403).json({ error: 'Você não tem permissão para deletar este usuário' })
+
         await UserModel.delete(request.params.id)
         response.json({ message: 'Usuário deletado com sucesso' })
     } catch (error) {
@@ -86,8 +113,12 @@ router.delete('/:id', async(request, response) => {
 })
 
 // Mudar dados mais flexíveis - Usuário mudando dados de perfil
-router.patch('/:id', validate(updateUserSchema), async(request, response) => {
+router.patch('/:id', authMiddleware, validate(updateUserSchema), async(request, response) => {
     try {
+      // Verifica se é o próprio usuário ou um admin
+      if (request.userId !== request.params.id)
+        return response.status(403).json({ error: 'Você não tem permissão para atualizar este usuário' })
+
         const result = await UserModel.update(request.params.id, request.body)
 
         response.status(200).json(result)
@@ -96,8 +127,11 @@ router.patch('/:id', validate(updateUserSchema), async(request, response) => {
     }
 })
 
-router.put('/:id/change-password', validate(changePasswordSchema), async(request, response) => {
+router.put('/:id/change-password', authMiddleware, validate(changePasswordSchema), async(request, response) => {
     try {
+        if (request.userId !== request.params.id)
+          return response.status(403).json({ error: 'Você não tem permissão para atualizar a senha deste usuário' })
+
         const { currentPassword, newPassword } = request.body
         const result = await UserModel.changePassword(request.params.id, currentPassword, newPassword)
 
@@ -107,7 +141,7 @@ router.put('/:id/change-password', validate(changePasswordSchema), async(request
     }
 })
 
-router.patch('/:id/roles', validate(updateRolesSchema), async(request, response) => {
+router.patch('/:id/roles', authMiddleware, isGestor, validate(updateRolesSchema), async(request, response) => {
   try {
     const { adminId, roleIds } = request.body
 
