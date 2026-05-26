@@ -160,7 +160,7 @@ const UserModel = {
             })
         )
 
-        const allowedSlugs = ['public_manager', 'admin', 'superadmin']
+        const allowedSlugs = ['gestor', 'admin', 'superadmin']
         const hasDashboardAccess = roles.some(role => allowedSlugs.includes(role?.slug))
 
         if(!hasDashboardAccess) throw new Error('Acesso negado. Você não tem permissão para acessar o dashboard')

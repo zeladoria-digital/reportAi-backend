@@ -11,7 +11,7 @@ async function isGestor(request, response, next) {
     // Busca os papéis do usuário logado
     const roles = await Promise.all(
       roleIds.map(async (roleId) => {
-        const roleDoc = await db.collection('roles').doc(String(roleId)).get()
+        const roleDoc = await db.collection('roles').doc(roleId).get()
         return roleDoc.exists ? roleDoc.data() : null
       })
     )
