@@ -11,6 +11,7 @@ function authMiddleware(request, response, next) {
 
   try {
     const decoded = jwt.verify(token, process.env.JWT_SECRET)
+    console.log('decoded:', decoded)
     request.userId = decoded.id // ← injeta o id do usuário logado na requisição
     request.userLevel = decoded.level
     request.userRoleIds = decoded.roleIds

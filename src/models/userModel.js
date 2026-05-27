@@ -150,6 +150,7 @@ const UserModel = {
         if(user.status !== 'active') throw new Error('Usuário inativo. Entre em contato com o suporte')
 
         const { password: _, ...userWithoutPassword } = user
+
         return userWithoutPassword
     },
 

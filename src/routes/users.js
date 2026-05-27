@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken')
 const { registerUserSchema, updateUserSchema, loginSchema, changePasswordSchema, updateRolesSchema } = require('../validators/userValidator')
 const authMiddleware = require('../middlewares/auth')
 const isGestor = require('../middlewares/isGestor')
+const { db } = require('../config/firebase')
 
 router.get('/', authMiddleware, isGestor,  async(request, response) => {
     try {
@@ -29,6 +30,7 @@ router.post('/login', validate(loginSchema), async(request, response) => {
         id: user.id,
         email: user.email,
         level: user.level,
+        roleIds: user.roleIds,
       },
       process.env.JWT_SECRET,
       { expiresIn: '8h' } // token expira em 8 horas
