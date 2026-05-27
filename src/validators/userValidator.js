@@ -70,9 +70,6 @@ const changePasswordSchema = Joi.object({
 })
 
 const updateRolesSchema = Joi.object({
-  adminId: Joi.number().integer().required().messages({
-    'any.required': 'Id do administrador é obrigatório',
-  }),
   roleIds: Joi.array().items(Joi.string()).min(1).required().messages({
     'array.min': 'Informe ao menos um papel',
     'any.required': 'Papéis são obrigatórios',

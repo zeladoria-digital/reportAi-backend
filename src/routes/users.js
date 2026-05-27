@@ -42,7 +42,7 @@ router.post('/login', validate(loginSchema), async(request, response) => {
   }
 })
 
-router.post('/login/dashboard', validate(loginSchema), async(request, response) => {
+router.post('/login-dashboard', validate(loginSchema), async(request, response) => {
   try {
     const { email, password } = request.body
 
@@ -71,6 +71,7 @@ router.post('/register', validate(registerUserSchema), async(request, response) 
 
 router.get('/:id', authMiddleware, async(request, response) => {
     try {
+      const userRoleIds = request.userRoleIds || []
       // Busca os papéis do usuário logado
       const roles = await Promise.all(
         request.userRoleIds.map(async (roleId) => {
@@ -95,18 +96,6 @@ router.get('/:id', authMiddleware, async(request, response) => {
       }
 
       response.json(user)
-    } catch (error) {
-        response.status(500).json({ error: error.message })
-    }
-})
-
-router.delete('/:id', authMiddleware, async(request, response) => {
-    try {
-        if (request.userId !== request.params.id)
-          return response.status(403).json({ error: 'Você não tem permissão para deletar este usuário' })
-
-        await UserModel.delete(request.params.id)
-        response.json({ message: 'Usuário deletado com sucesso' })
     } catch (error) {
         response.status(500).json({ error: error.message })
     }
@@ -143,10 +132,10 @@ router.put('/:id/change-password', authMiddleware, validate(changePasswordSchema
 
 router.patch('/:id/roles', authMiddleware, isGestor, validate(updateRolesSchema), async(request, response) => {
   try {
-    const { adminId, roleIds } = request.body
+    const { roleIds } = request.body
 
     const result = await UserModel.updateRoles(
-      adminId,
+      request.userId, // Id do admin/gestor que está fazendo a alteração
       request.params.id,
       roleIds
     )

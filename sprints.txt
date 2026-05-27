@@ -31,12 +31,12 @@ Cadastro:
 
 Login:
 (Implementado e testado) O usuário comum pode fazer o login no aplicativo mobile.
-(Implementado e a testar) Usuários com permissão podem realizar login no dashboard web.
+(Implementado e testado) Usuários com permissão podem realizar login no dashboard web.
 
 Atualizar dados:
-(Implementado e a testar) O usuário pode atualizar determinados campos após o cadastro. Não engloba dados sensivéis.
-(Implementado e a testar) O usuário pode atualizar a senha, em um período determinado (30 em 30 dias). Por questão de segurança, solicita a senha antiga.
+(Implementado e testado) O usuário pode atualizar determinados campos após o cadastro. Não engloba dados sensivéis.
+(Implementado e testado) O usuário pode atualizar a senha, em um período determinado (30 em 30 dias). Por questão de segurança, solicita a senha antiga.
 
 Atribuição de papeis:
-(Implementado e a testar) O admin pode designar papeis para usuarios comuns, que passam a ter determinadas permissões de acordo com as especificidades de cada um.
+(Implementado e testado) O admin pode designar papeis para usuarios comuns, que passam a ter determinadas permissões de acordo com as especificidades de cada um.
 

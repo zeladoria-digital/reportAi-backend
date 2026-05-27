@@ -5,6 +5,7 @@ const bcrypt = require('bcrypt')
 const usersCollection = db.collection('users')
 
 const UserModel = {
+    // TESTADO 
     async register(data){
         // Antes de tudo, garantir que o usuário aceitou os termos LGPD. Isso é fundamental para a conformidade legal e para proteger a privacidade dos usuários. Se o campo 'agreeLgpdTerms' não for verdadeiro, lançamos um erro imediatamente, impedindo o cadastro.
         if(!data.agreeLgpdTerms) throw new Error('É necessário aceitar os termos LGPD')
@@ -61,6 +62,7 @@ const UserModel = {
         return { id: doc.id, ...dataWithoutPassword, roleIds: [defaultRole.id], status: 'active' }
     },
 
+    // TESTADO
      async update(id, data) {
         const user = await usersCollection.doc(id).get()
         if(!user.exists) throw new Error('Usuário não existe')
@@ -81,6 +83,7 @@ const UserModel = {
         return { id, ...dataWithoutPassword }
     },
 
+    // TESTADO
     async getAll() {
         const snapshot = await usersCollection.get()
 
@@ -92,32 +95,45 @@ const UserModel = {
         })
     },
 
+    // Problemas detectados - TODO : Corrigir
     async getById(id) {
         const userDoc = await usersCollection.doc(id).get()
         if (!userDoc.exists) return null
 
-        const { password, ...data } = userDoc.data() // Remove senha do retorno
-        const user = { id: userDoc.id, ...data, createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : null }
+        const { password, ...data } = userDoc.data()
 
+        console.log('data completo:', JSON.stringify(data))
+        const user = {
+            id: userDoc.id,
+            ...data,
+            createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : null
+        }
+
+        // Busca o endereço
         if (user.addressId) {
-        const addressDoc = await db.collection('address').doc(String(user.addressId)).get()
-        user.address = { id: addressDoc.id, ...addressDoc.data() }
-        delete user.addressId
+            const addressDoc = await db.collection('address').doc(String(user.addressId)).get()
+            user.address = { id: addressDoc.id, ...addressDoc.data() }
+            delete user.addressId
+        }
+
+        // Busca os papéis
+        if (user.roleIds && user.roleIds.length > 0) {
+            const roles = await Promise.all(
+            user.roleIds.map(async (roleId) => {
+                const roleDoc = await db.collection('roles').doc(String(roleId)).get()
+                return roleDoc.exists ? { id: roleDoc.id, ...roleDoc.data() } : null
+            })
+            )
+            user.roles = roles.filter(role => role !== null)
+            delete user.roleIds
+        } else {
+            user.roles = []
         }
 
         return user
     },
 
-    async delete(id) {
-        const user = await usersCollection.doc(id).get()
-
-        if(!user.exists) throw new Error('Usuário não existente')
-        
-        await usersCollection.doc(id).delete()
-        return { id }
-    },
-
-    // Login na plataforma mobile -> Qualquer papel (role) pode acessar
+    // TESTADO
     async login(email, password) {
         const snapshot = await usersCollection
             .where('email', '==', email)
@@ -137,7 +153,7 @@ const UserModel = {
         return userWithoutPassword
     },
 
-    // Login no dashboard
+    // TESTADO
     async loginDashboard(email, password) {
         const snapshot = await usersCollection
             .where('email', '==', email)
@@ -153,11 +169,14 @@ const UserModel = {
 
         if(user.status !== 'active') throw new Error('Usuário inativo. Entre em contato com o suporte')
         
+        if (!user.roleIds || user.roleIds.length === 0)
+            throw new Error('Acesso negado. Você não tem permissão para acessar o dashboard')
+
         const roles = await Promise.all(
-            user.roleIds.map(async (roleId) => {
-                const roleDoc = await db.collection('roles').doc(roleId).get()
-                return roleDoc.exists ? { id: roleDoc.id, ...roleDoc.data() } : null
-            })
+        user.roleIds.map(async (roleId) => {
+            const roleDoc = await db.collection('roles').doc(roleId).get()
+            return roleDoc.exists ? { id: roleDoc.id, ...roleDoc.data() } : null
+        })
         )
 
         const allowedSlugs = ['gestor', 'admin', 'superadmin']
@@ -169,6 +188,7 @@ const UserModel = {
         return { ...userWithoutPassword, roles }
     },
 
+    // TESTADO
     async changePassword(id, currentPassword, newPassword) {
         const userDoc = await usersCollection.doc(id).get()
         if (!userDoc.exists) throw new Error('Usuário não encontrado')
@@ -216,6 +236,7 @@ const UserModel = {
         return { message: 'Senha alterada com sucesso' }
     },
 
+    // TESTADO
     async updateRoles(adminId, targetUserId, roleIds) {
         // Verifica se o admin existe e tem permissão
         const adminDoc = await usersCollection.doc(adminId).get()
@@ -227,11 +248,14 @@ const UserModel = {
         const admin = adminDoc.data()
 
         // Busca os papéis do admin e verifica se tem permissão
+        if (!admin.roleIds || admin.roleIds.length === 0)
+            throw new Error('Você não tem permissão para gerenciar papéis')
+
         const adminRoles = await Promise.all(
-            admin.roleIds.map(async (roleId) => {
+        admin.roleIds.map(async (roleId) => {
             const roleDoc = await db.collection('roles').doc(roleId).get()
             return roleDoc.exists ? roleDoc.data() : null
-            })
+        })
         )
 
         const hasPermission = adminRoles.some(role =>
@@ -282,5 +306,7 @@ const UserModel = {
         }
     },
 }
+
+// TO DO -> Criar função para desativar usuário (status: 'inactive') - Somente admin pode fazer isso. Usuário inativo não pode logar ou acessar o dashboard, mas mantém os dados para histórico e possíveis reativações futuras.
 
 module.exports = UserModel
