@@ -40,3 +40,14 @@ Atualizar dados:
 Atribuição de papeis:
 (Implementado e testado) O admin pode designar papeis para usuarios comuns, que passam a ter determinadas permissões de acordo com as especificidades de cada um.
 
+
+SPRINT 02 -------------------------------------------------------------------------------------------------------------------------------------------------------------
+
+(Integração IoT e Storage):
+Foco: Recepção de anomalias e fotos.
+Tarefas: Configurar as regras do Firebase Storage para receber o upload das fotos do cidadão. Criar regras para aceitar requisições (POST) diretas do hardware IoT contendo JSON (Coordenadas + Categoria + Foto).
+Tarefas associadas: RF16, RF17.
+(Monitoramento de Frota):
+Foco: Status do hardware.
+Tarefas: Criar a coleção e as regras para receber os "Heartbeats" da frota a cada 5 minutos.
+Tarefas associadas: RF19.

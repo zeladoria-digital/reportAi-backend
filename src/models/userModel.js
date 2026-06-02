@@ -1,5 +1,5 @@
 // Acessar o firebase
-const { db } = require('../config/firebase')
+const { db, auth } = require('../config/firebase')
 const bcrypt = require('bcrypt')
 
 const usersCollection = db.collection('users')
@@ -30,10 +30,15 @@ const UserModel = {
 
         const defaultRole = roleSnapshot.docs[0]
 
-        // Senha criptografada
-        const hashedPassword = await bcrypt.hash(data.password, 10)
+        // Como iremos usar o Firebase Auth, precisamos criar o usuário lá
+        const firebaseUser = await auth.createUser({
+            email: data.email,
+            password: data.password,
+            displayName: data.name,
+        })
 
-        const doc = await usersCollection.add({
+
+        const doc = await usersCollection.doc(firebaseUser.uid).set({
             // Dados pessoais
             name: data.name,
             cpf: data.cpf,
@@ -44,7 +49,6 @@ const UserModel = {
 
             // Dados para autenticação
             email: data.email,
-            password: hashedPassword,
 
             // Level inicial é 'cooper'
             level: 'cooper',
@@ -59,7 +63,7 @@ const UserModel = {
         })
         // Remove senha do retorno
         const { password, ...dataWithoutPassword } = data
-        return { id: doc.id, ...dataWithoutPassword, roleIds: [defaultRole.id], status: 'active' }
+        return { id: firebaseUser.uid, ...dataWithoutPassword, roleIds: [defaultRole.id], status: 'active' }
     },
 
     // TESTADO
