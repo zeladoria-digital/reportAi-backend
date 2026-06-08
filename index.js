@@ -9,11 +9,16 @@ app.use(express.json());
 const rolesRoute = require('./src/routes/roles')
 const usersRoute = require('./src/routes/users')
 const addressRoute = require('./src/routes/address')
-//const complaintRoute = require('./src/routes/complaint')
+const complaintsRoute = require('./src/routes/complaints')
+const devicesRoute = require('./src/routes/devices')
+const vehiclesRoute = require('./src/routes/vehicles')
 
 app.use('/roles', rolesRoute)
 app.use('/users', usersRoute)
 app.use('/address', addressRoute)
+app.use('/complaints', complaintsRoute)
+app.use('/devices', devicesRoute)
+app.use('/vehicles', vehiclesRoute)
 
 // Rota de exemplo
 app.get('/', (req, res) => {

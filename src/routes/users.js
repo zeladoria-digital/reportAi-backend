@@ -6,7 +6,7 @@ const jwt = require('jsonwebtoken')
 const { registerUserSchema, updateUserSchema, loginSchema, changePasswordSchema, updateRolesSchema } = require('../validators/userValidator')
 const authMiddleware = require('../middlewares/auth')
 const isGestor = require('../middlewares/isGestor')
-const { db } = require('../config/firebase')
+const { db, auth } = require('../config/firebase')
 
 router.get('/', authMiddleware, isGestor,  async(request, response) => {
     try {
@@ -17,16 +17,16 @@ router.get('/', authMiddleware, isGestor,  async(request, response) => {
     }
 })
 
+// Login mobile
 router.post('/login', validate(loginSchema), async(request, response) => {
   try {
     const { idToken } = request.body
 
-    // Verifica o idToken do Firebase
     const decodedToken = await auth.verifyIdToken(idToken)
     const uid = decodedToken.uid
 
-    // Busca o usuário no Firestore
-    const userDoc = await usersCollection.doc(uid).get()
+    // ← troque usersCollection por db.collection('users')
+    const userDoc = await db.collection('users').doc(uid).get()
     if (!userDoc.exists) throw new Error('Usuário não encontrado')
 
     const { password, ...userData } = userDoc.data()
@@ -34,7 +34,6 @@ router.post('/login', validate(loginSchema), async(request, response) => {
 
     if (user.status !== 'active') throw new Error('Usuário inativo')
 
-    // Gera o JWT próprio
     const token = jwt.sign(
       {
         id: user.id,
@@ -52,16 +51,16 @@ router.post('/login', validate(loginSchema), async(request, response) => {
   }
 })
 
+// Login dashboard
 router.post('/login-dashboard', validate(loginSchema), async(request, response) => {
   try {
     const { idToken } = request.body
 
-    // Verifica o idToken do Firebase
     const decodedToken = await auth.verifyIdToken(idToken)
     const uid = decodedToken.uid
 
-    // Busca o usuário no Firestore
-    const userDoc = await usersCollection.doc(uid).get()
+    // ← troque usersCollection por db.collection('users')
+    const userDoc = await db.collection('users').doc(uid).get()
     if (!userDoc.exists) throw new Error('Usuário não encontrado')
 
     const { password, ...userData } = userDoc.data()
@@ -69,7 +68,6 @@ router.post('/login-dashboard', validate(loginSchema), async(request, response) 
 
     if (user.status !== 'active') throw new Error('Usuário inativo')
 
-    // Verifica se tem papel de gestor/admin
     const roles = await Promise.all(
       user.roleIds.map(async (roleId) => {
         const roleDoc = await db.collection('roles').doc(roleId).get()
@@ -84,7 +82,6 @@ router.post('/login-dashboard', validate(loginSchema), async(request, response) 
       throw new Error('Acesso negado. Você não tem permissão para acessar o dashboard')
     }
 
-    // Gera o JWT próprio
     const token = jwt.sign(
       {
         id: user.id,
