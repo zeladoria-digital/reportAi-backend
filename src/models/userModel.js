@@ -5,28 +5,80 @@ const bcrypt = require('bcrypt')
 const usersCollection = db.collection('users')
 
 const UserModel = {
+
+    async loginGoogle(googleData) {
+        // googleData receberá as informações básicas que o Google nos devolve
+        const { email, name, uid } = googleData;
+
+        // 1. Verifica se o usuário já existe (procurando pelo email)
+        const snapshot = await usersCollection.where('email', '==', email).get();
+
+        if (!snapshot.empty) {
+            // USUÁRIO JÁ EXISTE: Faz o login devolvendo os dados
+            const userDoc = snapshot.docs[0];
+            const user = { id: userDoc.id, ...userDoc.data() };
+
+            // Se ele foi inativado por um admin, barramos aqui
+            if (user.status === 'inactive') {
+                throw new Error('Usuário inativo. Entre em contato com o suporte');
+            }
+
+            // Remove a senha do retorno (se houver)
+            const { password, ...userWithoutPassword } = user;
+
+            // Aqui o frontend vai receber o status atual. 
+            // Pode ser 'active' (se ele já completou tudo antes) ou 'incomplete' (se logou e saiu sem completar)
+            return userWithoutPassword;
+        }
+
+        // 2. USUÁRIO NOVO (Primeiro acesso via Google)
+
+        // Busca o papel padrão 'user'
+        const roleSnapshot = await db.collection('roles').where('slug', '==', 'user').get();
+        if (roleSnapshot.empty) throw new Error('Papel "user" não existe');
+
+        const defaultRole = roleSnapshot.docs[0];
+
+        // Montamos o objeto APENAS com o que temos e definimos o status aguardando conclusão
+        const newUser = {
+            name: name,
+            email: email,
+            level: 'cooper',
+            status: 'incompleto', // Indica ao frontend que precisa pedir CPF, telefone, etc.
+            roleIds: [defaultRole.id],
+            agreeLgpdTerms: false, // Força ele a aceitar na próxima tela
+            createdAt: new Date()
+            // Não colocamos password, cpf, dateOfBirth, phoneNumber e addressId ainda.
+        };
+
+        // Salva no banco usando o UID do Google
+        await usersCollection.doc(uid).set(newUser);
+
+        return { id: uid, ...newUser };
+    },
+
     // TESTADO 
-    async register(data){
+    async register(data) {
         // Antes de tudo, garantir que o usuário aceitou os termos LGPD. Isso é fundamental para a conformidade legal e para proteger a privacidade dos usuários. Se o campo 'agreeLgpdTerms' não for verdadeiro, lançamos um erro imediatamente, impedindo o cadastro.
-        if(!data.agreeLgpdTerms) throw new Error('É necessário aceitar os termos LGPD')
+        if (!data.agreeLgpdTerms) throw new Error('É necessário aceitar os termos LGPD')
 
         // Verificar se email e cpf já existem
         const emailSnapshot = await usersCollection.where('email', '==', data.email).get()
-        if(!emailSnapshot.empty) throw new Error('Email já cadastrado')
+        if (!emailSnapshot.empty) throw new Error('Email já cadastrado')
 
         const cpfSnapshot = await usersCollection.where('cpf', '==', data.cpf).get()
-        if(!cpfSnapshot.empty) throw new Error('CPF já cadastrado')
+        if (!cpfSnapshot.empty) throw new Error('CPF já cadastrado')
 
         // Verificar se o addressId e o role 'user' existem
-        if(data.addressId){
+        if (data.addressId) {
             const addressDoc = await db.collection('address').doc(data.addressId).get()
-            if(!addressDoc.exists)
+            if (!addressDoc.exists)
                 throw new Error('Endereço não encontrado')
         }
 
         // Garantir que o papel 'user' exista
         const roleSnapshot = await db.collection('roles').where('slug', '==', 'users').get()
-        if(roleSnapshot.empty) throw new Error('Papel "user" não existe')
+        if (roleSnapshot.empty) throw new Error('Papel "user" não existe')
 
         const defaultRole = roleSnapshot.docs[0]
 
@@ -53,7 +105,7 @@ const UserModel = {
             // Level inicial é 'cooper'
             level: 'cooper',
             agreeLgpdTerms: data.agreeLgpdTerms,
-            status: 'active', 
+            status: 'active',
 
             // Cada usuário terá um ou mais papel. 
             // No contexto do cadastro, o registro sempre definirá o papel de 'user'
@@ -67,18 +119,18 @@ const UserModel = {
     },
 
     // TESTADO
-     async update(id, data) {
+    async update(id, data) {
         const user = await usersCollection.doc(id).get()
-        if(!user.exists) throw new Error('Usuário não existe')
+        if (!user.exists) throw new Error('Usuário não existe')
 
-        if(data.addressId){
+        if (data.addressId) {
             const addressDoc = await db.collection('address').doc(data.addressId).get()
-            if(!addressDoc.exists)
+            if (!addressDoc.exists)
                 throw new Error('Endereço não encontrado')
         }
 
         if (data.password) {
-        data.password = await bcrypt.hash(data.password, 10) // Criptografa se vier no update
+            data.password = await bcrypt.hash(data.password, 10) // Criptografa se vier no update
         }
 
         await usersCollection.doc(id).update(data)
@@ -91,11 +143,11 @@ const UserModel = {
     async getAll() {
         const snapshot = await usersCollection.get()
 
-        if(snapshot.empty) return null
+        if (snapshot.empty) return null
 
         return snapshot.docs.map(doc => {
-        const { password, cpf,  ...data } = doc.data() // Remove cpf e senha do retorno
-        return { id: doc.id, ...data, createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : null }
+            const { password, cpf, ...data } = doc.data() // Remove cpf e senha do retorno
+            return { id: doc.id, ...data, createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : null }
         })
     },
 
@@ -123,10 +175,10 @@ const UserModel = {
         // Busca os papéis
         if (user.roleIds && user.roleIds.length > 0) {
             const roles = await Promise.all(
-            user.roleIds.map(async (roleId) => {
-                const roleDoc = await db.collection('roles').doc(String(roleId)).get()
-                return roleDoc.exists ? { id: roleDoc.id, ...roleDoc.data() } : null
-            })
+                user.roleIds.map(async (roleId) => {
+                    const roleDoc = await db.collection('roles').doc(String(roleId)).get()
+                    return roleDoc.exists ? { id: roleDoc.id, ...roleDoc.data() } : null
+                })
             )
             user.roles = roles.filter(role => role !== null)
             delete user.roleIds
@@ -151,7 +203,7 @@ const UserModel = {
         const isPasswordValid = await bcrypt.compare(password, user.password)
         if (!isPasswordValid) throw new Error('E-mail ou senha inválidos')
 
-        if(user.status !== 'active') throw new Error('Usuário inativo. Entre em contato com o suporte')
+        if (user.status !== 'active') throw new Error('Usuário inativo. Entre em contato com o suporte')
 
         const { password: _, ...userWithoutPassword } = user
 
@@ -163,31 +215,31 @@ const UserModel = {
         const snapshot = await usersCollection
             .where('email', '==', email)
             .get()
-        
+
         if (snapshot.empty) throw new Error('E-mail ou senha inválidos')
-        
+
         const userDoc = snapshot.docs[0]
         const user = { id: userDoc.id, ...userDoc.data() }
 
         const isPasswordValid = await bcrypt.compare(password, user.password)
-        if(!isPasswordValid) throw new Error('E-mail ou senha inválidos')
+        if (!isPasswordValid) throw new Error('E-mail ou senha inválidos')
 
-        if(user.status !== 'active') throw new Error('Usuário inativo. Entre em contato com o suporte')
-        
+        if (user.status !== 'active') throw new Error('Usuário inativo. Entre em contato com o suporte')
+
         if (!user.roleIds || user.roleIds.length === 0)
             throw new Error('Acesso negado. Você não tem permissão para acessar o dashboard')
 
         const roles = await Promise.all(
-        user.roleIds.map(async (roleId) => {
-            const roleDoc = await db.collection('roles').doc(roleId).get()
-            return roleDoc.exists ? { id: roleDoc.id, ...roleDoc.data() } : null
-        })
+            user.roleIds.map(async (roleId) => {
+                const roleDoc = await db.collection('roles').doc(roleId).get()
+                return roleDoc.exists ? { id: roleDoc.id, ...roleDoc.data() } : null
+            })
         )
 
         const allowedSlugs = ['gestor', 'admin', 'superadmin']
         const hasDashboardAccess = roles.some(role => allowedSlugs.includes(role?.slug))
 
-        if(!hasDashboardAccess) throw new Error('Acesso negado. Você não tem permissão para acessar o dashboard')
+        if (!hasDashboardAccess) throw new Error('Acesso negado. Você não tem permissão para acessar o dashboard')
 
         const { password: _, ...userWithoutPassword } = user
         return { ...userWithoutPassword, roles }
@@ -207,12 +259,12 @@ const UserModel = {
             oneMonthAgo.setMonth(oneMonthAgo.getMonth() - 1)
 
             if (lastChange > oneMonthAgo) {
-            const nextAllowedDate = new Date(lastChange)
-            nextAllowedDate.setMonth(nextAllowedDate.getMonth() + 1)
+                const nextAllowedDate = new Date(lastChange)
+                nextAllowedDate.setMonth(nextAllowedDate.getMonth() + 1)
 
-            throw new Error(
-                `Senha só pode ser alterada após ${nextAllowedDate.toLocaleDateString('pt-BR')}`
-            )
+                throw new Error(
+                    `Senha só pode ser alterada após ${nextAllowedDate.toLocaleDateString('pt-BR')}`
+                )
             }
         }
 
@@ -257,10 +309,10 @@ const UserModel = {
             throw new Error('Você não tem permissão para gerenciar papéis')
 
         const adminRoles = await Promise.all(
-        admin.roleIds.map(async (roleId) => {
-            const roleDoc = await db.collection('roles').doc(roleId).get()
-            return roleDoc.exists ? roleDoc.data() : null
-        })
+            admin.roleIds.map(async (roleId) => {
+                const roleDoc = await db.collection('roles').doc(roleId).get()
+                return roleDoc.exists ? roleDoc.data() : null
+            })
         )
 
         const hasPermission = adminRoles.some(role =>
@@ -282,7 +334,7 @@ const UserModel = {
         for (const roleId of roleIds) {
             const roleDoc = await db.collection('roles').doc(String(roleId)).get()
             if (!roleDoc.exists) {
-            throw new Error(`Papel com id '${roleId}' não encontrado`)
+                throw new Error(`Papel com id '${roleId}' não encontrado`)
             }
         }
 

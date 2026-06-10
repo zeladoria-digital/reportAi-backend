@@ -52,6 +52,32 @@ router.post('/login', validate(loginSchema), async(request, response) => {
   }
 })
 
+
+router.post('/login/google', async (req, res) => {
+    try {
+        const { idToken } = req.body; 
+
+        if (!idToken) {
+            return res.status(400).json({ error: 'O token do Google é obrigatório.' });
+        }
+
+        const decodedToken = await admin.auth().verifyIdToken(idToken);
+
+        const dadosSegurosDoGoogle = {
+            uid: decodedToken.uid,
+            name: decodedToken.name,
+            email: decodedToken.email
+        };
+        const user = await UserModel.loginGoogle(dadosSegurosDoGoogle);
+        
+        return res.status(200).json(user);
+
+    } catch (error) {
+        console.error('Erro na validação do Firebase:', error);
+        return res.status(401).json({ error: 'Token do Google inválido ou expirado.' });
+    }
+});
+
 router.post('/login-dashboard', validate(loginSchema), async(request, response) => {
   try {
     const { idToken } = request.body
