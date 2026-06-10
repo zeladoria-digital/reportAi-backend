@@ -109,13 +109,21 @@ const ComplaintModel = {
     }
   },
 
-  // Atualiza status — gestor/admin
-  async updateStatus(id, status) {
+  async updateStatus(id, status, reviewedBy = null, notes = null) {
     const doc = await complaintsCollection.doc(id).get()
     if (!doc.exists) throw new Error('Denúncia não encontrada')
 
+    const complaint = doc.data()
+
+    // Não permite alterar denúncias já resolvidas ou canceladas
+    if (['resolved', 'cancelled'].includes(complaint.status)) {
+      throw new Error('Esta denúncia não pode ser alterada')
+    }
+
     await complaintsCollection.doc(id).update({
       status,
+      reviewNotes: notes ?? null,
+      reviewedBy: reviewedBy ?? null,
       updatedAt: new Date(),
     })
 

@@ -63,3 +63,35 @@ Pendente:
 
 Testes de rotas de complaints
 Regras do Firebase Storage — pendente pelo plano Blaze
+
+
+Panorama geral (09/06/2026):
+Implementado e testado:
+Login com Firebase Auth — usando idToken gerado pelo Firebase
+Login dashboard — verificação de papel de gestor/admin
+Security Rules do Firestore — testadas no simulador
+Dispositivo IoT — cadastro e heartbeat
+Veículo — cadastro com referência ao dispositivo
+Denúncia do cidadão — criação com validação EXIF
+Denúncia do IoT — criação com referência ao dispositivo
+Listagem de denúncias — com filtros por source e status
+Aprovação/rejeição de denúncia — pelo gestor
+Equipe de campo — cadastro com agentes
+Ordem de serviço — criação e atualização de status
+Filtros de denúncia — ?source=iot e ?status=pending — índice criado e testado
+
+
+Implementado mas não testado:
+Inativação de equipe — PATCH /field-teams/:id/inactivate
+Adicionar/remover membros da equipe — PATCH /field-teams/:id/members/add e /remove
+Listagem de ordens por equipe — GET /service-orders/my-team/:teamId
+Monitoramento de dispositivos offline — cron job do checkOfflineDevices
+Heartbeat com campos extras — currentTemperature, etc
+Inativação de veículo — PATCH /vehicles/:id/inactivate
+
+
+Pendente:
+Firebase Storage — requer plano Blaze
+Offline-first — responsabilidade do frontend mobile
+Testes completos das Security Rules — apenas o básico foi testado
+Login com Google — precisa ser testado com o SDK do Firebase no frontend
