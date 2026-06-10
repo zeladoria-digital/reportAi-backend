@@ -5,58 +5,6 @@ const bcrypt = require('bcrypt')
 const usersCollection = db.collection('users')
 
 const UserModel = {
-
-    async loginGoogle(googleData) {
-        // googleData receberá as informações básicas que o Google nos devolve
-        const { email, name, uid } = googleData;
-
-        // 1. Verifica se o usuário já existe (procurando pelo email)
-        const snapshot = await usersCollection.where('email', '==', email).get();
-
-        if (!snapshot.empty) {
-            // USUÁRIO JÁ EXISTE: Faz o login devolvendo os dados
-            const userDoc = snapshot.docs[0];
-            const user = { id: userDoc.id, ...userDoc.data() };
-
-            // Se ele foi inativado por um admin, barramos aqui
-            if (user.status === 'inactive') {
-                throw new Error('Usuário inativo. Entre em contato com o suporte');
-            }
-
-            // Remove a senha do retorno (se houver)
-            const { password, ...userWithoutPassword } = user;
-
-            // Aqui o frontend vai receber o status atual. 
-            // Pode ser 'active' (se ele já completou tudo antes) ou 'incomplete' (se logou e saiu sem completar)
-            return userWithoutPassword;
-        }
-
-        // 2. USUÁRIO NOVO (Primeiro acesso via Google)
-
-        // Busca o papel padrão 'user'
-        const roleSnapshot = await db.collection('roles').where('slug', '==', 'user').get();
-        if (roleSnapshot.empty) throw new Error('Papel "user" não existe');
-
-        const defaultRole = roleSnapshot.docs[0];
-
-        // Montamos o objeto APENAS com o que temos e definimos o status aguardando conclusão
-        const newUser = {
-            name: name,
-            email: email,
-            level: 'cooper',
-            status: 'incompleto', // Indica ao frontend que precisa pedir CPF, telefone, etc.
-            roleIds: [defaultRole.id],
-            agreeLgpdTerms: false, // Força ele a aceitar na próxima tela
-            createdAt: new Date()
-            // Não colocamos password, cpf, dateOfBirth, phoneNumber e addressId ainda.
-        };
-
-        // Salva no banco usando o UID do Google
-        await usersCollection.doc(uid).set(newUser);
-
-        return { id: uid, ...newUser };
-    },
-
     // TESTADO 
     async register(data) {
         // Antes de tudo, garantir que o usuário aceitou os termos LGPD. Isso é fundamental para a conformidade legal e para proteger a privacidade dos usuários. Se o campo 'agreeLgpdTerms' não for verdadeiro, lançamos um erro imediatamente, impedindo o cadastro.
@@ -362,6 +310,57 @@ const UserModel = {
             roleIds: finalRoleIds,
         }
     },
+    async loginGoogle(googleData) {
+        // googleData receberá as informações básicas que o Google nos devolve
+        const { email, name, uid } = googleData;
+
+        // 1. Verifica se o usuário já existe (procurando pelo email)
+        const snapshot = await usersCollection.where('email', '==', email).get();
+
+        if (!snapshot.empty) {
+            // USUÁRIO JÁ EXISTE: Faz o login devolvendo os dados
+            const userDoc = snapshot.docs[0];
+            const user = { id: userDoc.id, ...userDoc.data() };
+
+            // Se ele foi inativado por um admin, barramos aqui
+            if (user.status === 'inactive') {
+                throw new Error('Usuário inativo. Entre em contato com o suporte');
+            }
+
+            // Remove a senha do retorno (se houver)
+            const { password, ...userWithoutPassword } = user;
+
+            // Aqui o frontend vai receber o status atual. 
+            // Pode ser 'active' (se ele já completou tudo antes) ou 'incomplete' (se logou e saiu sem completar)
+            return userWithoutPassword;
+        }
+
+        // 2. USUÁRIO NOVO (Primeiro acesso via Google)
+
+        // Busca o papel padrão 'user'
+        const roleSnapshot = await db.collection('roles').where('slug', '==', 'users').get();
+        if (roleSnapshot.empty) throw new Error('Papel "user" não existe');
+
+        const defaultRole = roleSnapshot.docs[0];
+
+        // Montamos o objeto APENAS com o que temos e definimos o status aguardando conclusão
+        const newUser = {
+            name: name,
+            email: email,
+            level: 'cooper',
+            status: 'incompleto', // Indica ao frontend que precisa pedir CPF, telefone, etc.
+            roleIds: [defaultRole.id],
+            agreeLgpdTerms: false, // Força ele a aceitar na próxima tela
+            createdAt: new Date()
+            // Não colocamos password, cpf, dateOfBirth, phoneNumber e addressId ainda.
+        };
+
+        // Salva no banco usando o UID do Google
+        await usersCollection.doc(uid).set(newUser);
+
+        return { id: uid, ...newUser };
+    },
+
 }
 
 // TO DO -> Criar função para desativar usuário (status: 'inactive') - Somente admin pode fazer isso. Usuário inativo não pode logar ou acessar o dashboard, mas mantém os dados para histórico e possíveis reativações futuras.
