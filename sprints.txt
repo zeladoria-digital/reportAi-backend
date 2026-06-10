@@ -11,34 +11,21 @@ RF06: O aplicativo deve possuir funcionamento offline-first, permitindo que o ci
 RF07: O sistema mobile deve extrair os metadados da foto (dados EXIF) no momento do clique, validando se a data de criação do arquivo bate com a data do envio, para evitar que o cidadão faça upload de fotos antigas baixadas da internet.
 
 
-Até então:
-Address (Endereço)
-Criação:
-(Implementado e testado) O endereço é criado e então pode ser designado a um ou mais usuários.
+SITUAÇÃO ATUAL:
 
-Role (Papel)
-Criação:
-(Implementado e testado) Papeis podem ser criados. E neles, são definidas quais permissões teram no sistema.
-Atualização:
-(A testar) Papeis podem ser atualizados. Afinal de contas, um papel não tem funcionalidades fixas.
+Implementado:
+Provedores de login (E-mail/Senha) — ativado no Firebase Authentication e integrado ao backend com auth.verifyIdToken()
+Security Rules do Firestore — configuradas e testadas, garantindo que usuários não autenticados não acessam os dados e cidadãos só veem os próprios dados
+RF01 — Cadastro e login — endpoint POST /users/register cria o usuário no Firebase Auth e no Firestore, e POST /users/login autentica via idToken do Firebase
+RF22 — Autenticação restrita para gestores — endpoint POST /users/login-dashboard verifica se o usuário tem papel de gestor/admin antes de permitir acesso
 
-User (Usuário)
-Cadastro:
-(Implementado e testado) O usuário pode se cadastrar. Cadastrar o seu endereço junto. Cadastra usuários comuns.
-(Implementado e testado) Criptografia nas senhas.
-(A implementar e testar) Solicitar senhas iguais duas vezes.
-(A implementar e testar) Login via Google e Firebase Auth.
+Parcialmente implementado:
 
-Login:
-(Implementado e testado) O usuário comum pode fazer o login no aplicativo mobile.
-(Implementado e testado) Usuários com permissão podem realizar login no dashboard web.
+RNF07 — Validação EXIF — a lógica foi implementada no complaintModel.js mas ainda não foi testada pois depende do frontend mobile enviar os metadados
 
-Atualizar dados:
-(Implementado e testado) O usuário pode atualizar determinados campos após o cadastro. Não engloba dados sensivéis.
-(Implementado e testado) O usuário pode atualizar a senha, em um período determinado (30 em 30 dias). Por questão de segurança, solicita a senha antiga.
-
-Atribuição de papeis:
-(Implementado e testado) O admin pode designar papeis para usuarios comuns, que passam a ter determinadas permissões de acordo com as especificidades de cada um.
+Não implementado:
+Provedor Google — a rota POST /users/auth/google não foi criada e nem testada
+RNF06 — Offline-first — é responsabilidade exclusiva do frontend mobile, não do backend. Precisa ser implementado no React Native com AsyncStorage ou similar para salvar as ocorrências localmente e sincronizar quando houver conexão
 
 
 SPRINT 02 -------------------------------------------------------------------------------------------------------------------------------------------------------------
@@ -51,3 +38,60 @@ Tarefas associadas: RF16, RF17.
 Foco: Status do hardware.
 Tarefas: Criar a coleção e as regras para receber os "Heartbeats" da frota a cada 5 minutos.
 Tarefas associadas: RF19.
+
+RF16: O dispositivo deve enviar apenas a foto da anomalia, o GPS e a categoria do problema para a nuvem (Firebase), descartando o restante do vídeo para economizar dados.
+RF17: O dispositivo embarcado deve possuir um buffer local (armazenamento temporário, como um cartão SD). Se o caminhão passar por uma área de "sombra" (sem sinal 3G/4G), o sistema deve salvar as detecções da IA localmente.
+RF19: O dispositivo de hardware deve enviar um "heartbeat" (sinal de vida ou ping) para o servidor a cada 5 minutos, informando as coordenadas atuais do caminhão para que o gestor saiba onde a frota está em tempo real, mesmo que nenhum buraco tenha sido detectado.
+
+SITUAÇÃO ATUAL:
+Implementado:
+
+Regras do Firestore — configuradas e testadas
+Rota para receber dados do IoT — POST /complaints/iot
+Model de complaints unificado com source (citizen/iot)
+Coleção iot_devices com registro e heartbeat
+Heartbeat — POST /iot/devices/:id/heartbeat a cada 5 minutos (RF19)
+Testes das rotas de Device iot e vehicle no Postman
+
+Parcialmente implementado:
+
+RF16 — a rota recebe photoUrl mas o upload para o Storage está pendente pelo plano Blaze
+RF17 — buffer offline discutido mas não implementado — é responsabilidade do hardware/firmware, não do backend
+
+
+Pendente:
+
+Testes de rotas de complaints
+Regras do Firebase Storage — pendente pelo plano Blaze
+
+
+Panorama geral (09/06/2026):
+Implementado e testado:
+Login com Firebase Auth — usando idToken gerado pelo Firebase
+Login dashboard — verificação de papel de gestor/admin
+Security Rules do Firestore — testadas no simulador
+Dispositivo IoT — cadastro e heartbeat
+Veículo — cadastro com referência ao dispositivo
+Denúncia do cidadão — criação com validação EXIF
+Denúncia do IoT — criação com referência ao dispositivo
+Listagem de denúncias — com filtros por source e status
+Aprovação/rejeição de denúncia — pelo gestor
+Equipe de campo — cadastro com agentes
+Ordem de serviço — criação e atualização de status
+Filtros de denúncia — ?source=iot e ?status=pending — índice criado e testado
+
+
+Implementado mas não testado:
+Inativação de equipe — PATCH /field-teams/:id/inactivate
+Adicionar/remover membros da equipe — PATCH /field-teams/:id/members/add e /remove
+Listagem de ordens por equipe — GET /service-orders/my-team/:teamId
+Monitoramento de dispositivos offline — cron job do checkOfflineDevices
+Heartbeat com campos extras — currentTemperature, etc
+Inativação de veículo — PATCH /vehicles/:id/inactivate
+
+
+Pendente:
+Firebase Storage — requer plano Blaze
+Offline-first — responsabilidade do frontend mobile
+Testes completos das Security Rules — apenas o básico foi testado
+Login com Google — precisa ser testado com o SDK do Firebase no frontend
