@@ -34,8 +34,8 @@ router.post('/iot', validate(iotComplaintSchema), async(request, response) => {
 // Gestor lista todas com filtros opcionais
 router.get('/', authMiddleware, isGestor, async(request, response) => {
   try {
-    const { source, status } = request.query // ex: ?source=iot&status=pending
-    const complaints = await ComplaintModel.getAll({ source, status })
+    const { source, status, category, neighborhood } = request.query
+    const complaints = await ComplaintModel.getAll({ source, status, category, neighborhood })
     response.json(complaints)
   } catch (error) {
     response.status(500).json({ error: error.message })

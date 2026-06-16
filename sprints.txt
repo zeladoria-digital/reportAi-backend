@@ -52,17 +52,33 @@ Model de complaints unificado com source (citizen/iot)
 Coleção iot_devices com registro e heartbeat
 Heartbeat — POST /iot/devices/:id/heartbeat a cada 5 minutos (RF19)
 Testes das rotas de Device iot e vehicle no Postman
+Testes de rotas de complaints
 
 Parcialmente implementado:
 
 RF16 — a rota recebe photoUrl mas o upload para o Storage está pendente pelo plano Blaze
 RF17 — buffer offline discutido mas não implementado — é responsabilidade do hardware/firmware, não do backend
 
-
 Pendente:
-
-Testes de rotas de complaints
 Regras do Firebase Storage — pendente pelo plano Blaze
+
+
+SPRINT 03 -------------------------------------------------------------------------------------------------------------------------------------------------------------
+(Queries e Filtros):
+Foco: Otimização de leitura.
+Tarefas: Criar os índices (indexes) no Firestore para permitir os filtros rápidos do Painel Web (filtrar por Bairro, Tipo e Status simultaneamente) sem gerar lentidão.
+Tarefas associadas: RF24.
+
+RF24: O sistema deve permitir o filtro de ocorrências no mapa por bairro, Tipo de Problema, Origem (Cidadão ou IoT) e Status.
+
+(Gamificação e Gatilhos):
+Foco: Atualização de Status.
+Tarefas: Implementar a lógica (via regra de banco ou Firebase Cloud Functions) que atualiza a pontuação do cidadão assim que o administrador alterar o status de uma denúncia para "Concluído".
+Tarefas associadas: RF05, RF11, RF27.
+
+RF05: O aplicativo deve permitir que o cidadão acompanhe o status de sua solicitação (Ex: Recebido, Em Análise, Serviço Iniciado, Concluído).
+RF11 (Gamificação Cidadã): O aplicativo deve possuir um sistema de pontuação (ex: "Cidadão Ouro, Prata, Bronze") onde o usuário ganha pontos a cada denúncia validada e resolvida, estimulando o engajamento contínuo da população.
+RF27: (Triagem IA): O sistema deve realizar uma análise prévia das fotos enviadas pelo App Cidadão para estimar a veracidade da imagem antes de exibi-la ao gestor (Anti-Fraude). CORRIGIR
 
 
 Panorama geral (09/06/2026):

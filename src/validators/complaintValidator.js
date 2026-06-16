@@ -24,6 +24,10 @@ const citizenComplaintSchema = Joi.object({
     latitude: Joi.number().optional(),
     longitude: Joi.number().optional(),
   }).required(),
+  neighborhood: Joi.string().min(3).max(100).required().messages({
+  'string.min': 'Bairro deve ter no mínimo 3 caracteres',
+  'any.required': 'Bairro é obrigatório',
+}),
 })
 
 const iotComplaintSchema = Joi.object({
@@ -42,6 +46,7 @@ const iotComplaintSchema = Joi.object({
     latitude: Joi.number().required(),
     longitude: Joi.number().required(),
   }).required(),
+  neighborhood: Joi.string().min(3).max(100).optional()
 })
 
 const updateStatusSchema = Joi.object({

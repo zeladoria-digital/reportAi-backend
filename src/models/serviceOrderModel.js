@@ -1,5 +1,5 @@
 const { db } = require('../config/firebase')
-
+const AuditLogModel = require('./auditLogModel')
 const serviceOrdersCollection = db.collection('service_orders')
 
 const ServiceOrderModel = {
@@ -89,9 +89,11 @@ const ServiceOrderModel = {
   },
 
   // Agente de campo ou gestor atualiza o status
-  async updateStatus(id, status, notes = null) {
+  async updateStatus(id, status, notes = null, updatedBy = null) {
     const doc = await serviceOrdersCollection.doc(id).get()
     if (!doc.exists) throw new Error('Ordem de serviço não encontrada')
+
+    const previousStatus = doc.data().status
 
     const updateData = {
       status,
@@ -100,11 +102,8 @@ const ServiceOrderModel = {
 
     if (notes) updateData.notes = notes
 
-    // Se resolvida, registra a data
     if (status === 'completed') {
       updateData.resolvedAt = new Date()
-
-      // Atualiza o status da denúncia para 'resolved'
       await db.collection('complaints').doc(doc.data().complaintId).update({
         status: 'resolved',
         updatedAt: new Date(),
@@ -112,7 +111,6 @@ const ServiceOrderModel = {
     }
 
     if (status === 'cancelled') {
-      // Volta o status da denúncia para 'approved'
       await db.collection('complaints').doc(doc.data().complaintId).update({
         status: 'approved',
         updatedAt: new Date(),
@@ -120,6 +118,24 @@ const ServiceOrderModel = {
     }
 
     await serviceOrdersCollection.doc(id).update(updateData)
+
+    // Registra o log de auditoria
+    if (updatedBy) {
+      const userDoc = await db.collection('users').doc(updatedBy).get()
+      const userName = userDoc.exists ? userDoc.data().name : 'Desconhecido'
+
+      await AuditLogModel.create({
+        userId: updatedBy,
+        userName,
+        action: 'status_changed',
+        entity: 'service_order',
+        entityId: id,
+        previousValue: previousStatus,
+        newValue: status,
+        description: `Usuário '${userName}' alterou o status da ordem #${id} de '${previousStatus}' para '${status}'`,
+      })
+    }
+
     return { id, status }
   },
 
