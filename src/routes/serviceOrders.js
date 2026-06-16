@@ -55,7 +55,7 @@ router.post('/', authMiddleware, isGestor, validate(createServiceOrderSchema), a
 router.patch('/:id/status', authMiddleware, validate(updateStatusSchema), async(request, response) => {
   try {
     const { status, notes } = request.body
-    const result = await ServiceOrderModel.updateStatus(request.params.id, status, notes)
+    const result = await ServiceOrderModel.updateStatus(request.params.id, status, notes, request.userId)
     response.json(result)
   } catch (error) {
     response.status(400).json({ error: error.message })

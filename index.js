@@ -14,6 +14,7 @@ const devicesRoute = require('./src/routes/devices')
 const vehiclesRoute = require('./src/routes/vehicles')
 const fieldTeamsRoute = require('./src/routes/fieldTeams')
 const serviceOrdersRoute = require('./src/routes/serviceOrders')
+const auditLogsRoute = require('./src/routes/auditLogs')
 
 app.use('/roles', rolesRoute)
 app.use('/users', usersRoute)
@@ -23,6 +24,7 @@ app.use('/devices', devicesRoute)
 app.use('/vehicles', vehiclesRoute)
 app.use('/field-teams', fieldTeamsRoute)
 app.use('/service-orders', serviceOrdersRoute)
+app.use('/audit-logs', auditLogsRoute)
 
 // Rota de exemplo
 app.get('/', (req, res) => {

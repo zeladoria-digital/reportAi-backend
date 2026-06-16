@@ -25,7 +25,7 @@ const UserModel = {
         }
 
         // Garantir que o papel 'user' exista
-        const roleSnapshot = await db.collection('roles').where('slug', '==', 'users').get()
+        const roleSnapshot = await db.collection('roles').where('slug', '==', 'user').get()
         if (roleSnapshot.empty) throw new Error('Papel "user" não existe')
 
         const defaultRole = roleSnapshot.docs[0]
@@ -50,14 +50,17 @@ const UserModel = {
             // Dados para autenticação
             email: data.email,
 
-            // Level inicial é 'cooper'
+            // Dados de gamificação - Começam com valores padrão, mas podem ser atualizados conforme o usuário interage com a plataforma. O level e points são exemplos, mas podem ser expandidos para incluir conquistas, badges, etc.
             level: 'cooper',
+            points: 0,
+            
             agreeLgpdTerms: data.agreeLgpdTerms,
             status: 'active',
 
             // Cada usuário terá um ou mais papel. 
             // No contexto do cadastro, o registro sempre definirá o papel de 'user'
             roleIds: [defaultRole.id],
+            
 
             createdAt: new Date()
         })
@@ -338,7 +341,7 @@ const UserModel = {
         // 2. USUÁRIO NOVO (Primeiro acesso via Google)
 
         // Busca o papel padrão 'user'
-        const roleSnapshot = await db.collection('roles').where('slug', '==', 'users').get();
+        const roleSnapshot = await db.collection('roles').where('slug', '==', 'user').get();
         if (roleSnapshot.empty) throw new Error('Papel "user" não existe');
 
         const defaultRole = roleSnapshot.docs[0];
@@ -348,7 +351,8 @@ const UserModel = {
             name: name,
             email: email,
             level: 'cooper',
-            status: 'incompleto', // Indica ao frontend que precisa pedir CPF, telefone, etc.
+            provider: 'google', // Saber por onde o usuário se cadastrou.
+            status: 'incomplete', // Indica ao frontend que precisa pedir CPF, telefone, etc.
             roleIds: [defaultRole.id],
             agreeLgpdTerms: false, // Força ele a aceitar na próxima tela
             createdAt: new Date()
@@ -361,8 +365,51 @@ const UserModel = {
         return { id: uid, ...newUser };
     },
 
-}
+    async updatePoints(userId, pointsToAdd) {
+        const userDoc = await usersCollection.doc(userId).get()
+        if (!userDoc.exists) throw new Error('Usuário não encontrado')
 
-// TO DO -> Criar função para desativar usuário (status: 'inactive') - Somente admin pode fazer isso. Usuário inativo não pode logar ou acessar o dashboard, mas mantém os dados para histórico e possíveis reativações futuras.
+        const user = userDoc.data()
+        const currentPoints = user.points ?? 0
+        const newPoints = currentPoints + pointsToAdd
+
+        // Define o nível baseado na pontuação
+        let level
+        if (newPoints >= 500) {
+            level = 'gold'
+        } else if (newPoints >= 100) {
+            level = 'silver'
+        } else {
+            level = 'cooper'
+        }
+
+        await usersCollection.doc(userId).update({
+            points: newPoints,
+            level,
+            updatedAt: new Date(),
+        })
+
+        return { userId, points: newPoints, level }
+        },
+
+
+    async getRanking() {
+        const snapshot = await usersCollection
+            .orderBy('points', 'desc')
+            .limit(10) // top 10
+            .get()
+
+        return snapshot.docs.map((doc, index) => {
+            const { password, cpf, ...data } = doc.data()
+            return {
+            position: index + 1,
+            id: doc.id,
+            name: data.name,
+            points: data.points ?? 0,
+            level: data.level ?? 'cooper',
+            }
+        })
+    },
+}
 
 module.exports = UserModel

@@ -1,4 +1,5 @@
 const { db } = require('../config/firebase')
+const AuditLogModel = require('./auditLogModel')
 
 const complaintsCollection = db.collection('complaints')
 
@@ -41,6 +42,7 @@ const ComplaintModel = {
         longitude: data.exif.longitude ?? null,
       },
       iaReliability: data.iaReliability || null,
+      neighborhood: data.neighborhood ?? null,
       status: 'pending',
       createdAt: new Date(),
     })
@@ -63,6 +65,7 @@ const ComplaintModel = {
         longitude: data.location?.longitude ?? null,
       },
       iaReliability: data.iaReliability || null,
+      neighborhood: data.neighborhood ?? null,
       status: 'pending',
       createdAt: new Date(),
     })
@@ -76,6 +79,8 @@ const ComplaintModel = {
 
     if (filters.source) query = query.where('source', '==', filters.source)
     if (filters.status) query = query.where('status', '==', filters.status)
+    if (filters.category) query = query.where('category', '==', filters.category)
+    if (filters.neighborhood) query = query.where('neighborhood', '==', filters.neighborhood)
 
     const snapshot = await query.get()
     return snapshot.docs.map(doc => ({
@@ -109,26 +114,51 @@ const ComplaintModel = {
     }
   },
 
-  async updateStatus(id, status, reviewedBy = null, notes = null) {
-    const doc = await complaintsCollection.doc(id).get()
-    if (!doc.exists) throw new Error('Denúncia não encontrada')
+    async updateStatus(id, status, reviewedBy = null, notes = null) {
+      const doc = await complaintsCollection.doc(id).get()
+      if (!doc.exists) throw new Error('Denúncia não encontrada')
 
-    const complaint = doc.data()
+      const complaint = doc.data()
 
-    // Não permite alterar denúncias já resolvidas ou canceladas
-    if (['resolved', 'cancelled'].includes(complaint.status)) {
-      throw new Error('Esta denúncia não pode ser alterada')
-    }
+      if (['resolved', 'cancelled'].includes(complaint.status)) {
+        throw new Error('Esta denúncia não pode ser alterada')
+      }
 
-    await complaintsCollection.doc(id).update({
-      status,
-      reviewNotes: notes ?? null,
-      reviewedBy: reviewedBy ?? null,
-      updatedAt: new Date(),
-    })
+      const previousStatus = complaint.status
 
-    return { id, status }
-  },
+      await complaintsCollection.doc(id).update({
+        status,
+        reviewNotes: notes ?? null,
+        reviewedBy: reviewedBy ?? null,
+        updatedAt: new Date(),
+      })
+
+      // Gamificação
+      if (complaint.source === 'citizen' && complaint.userId) {
+        const UserModel = require('./userModel')
+        if (status === 'approved') await UserModel.updatePoints(complaint.userId, 10)
+        if (status === 'resolved') await UserModel.updatePoints(complaint.userId, 50)
+      }
+
+      // Registra o log de auditoria
+      if (reviewedBy) {
+        const userDoc = await db.collection('users').doc(reviewedBy).get()
+        const userName = userDoc.exists ? userDoc.data().name : 'Desconhecido'
+
+        await AuditLogModel.create({
+          userId: reviewedBy,
+          userName,
+          action: 'status_changed',
+          entity: 'complaint',
+          entityId: id,
+          previousValue: previousStatus,
+          newValue: status,
+          description: `Usuário '${userName}' alterou o status da denúncia #${id} de '${previousStatus}' para '${status}'`,
+        })
+      }
+
+      return { id, status }
+    },
 }
 
 module.exports = ComplaintModel
