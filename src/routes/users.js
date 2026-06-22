@@ -145,6 +145,49 @@ router.post('/register', validate(registerUserSchema), async (request, response)
     const users = await UserModel.register(request.body)
     response.status(200).json(users)
   } catch (error) {
+    console.error('Erro no registro:', error)
+    response.status(500).json({ error: error.message })
+  }
+})
+
+router.get('/ranking', async(request, response) => {
+  try {
+    const ranking = await UserModel.getRanking()
+    response.json(ranking)
+  } catch (error) {
+    response.status(500).json({ error: error.message })
+  }
+})
+
+router.get('/:id/points', authMiddleware, async(request, response) => {
+  try {
+    // Apenas o próprio usuário ou gestor/admin pode ver
+    const userRoleIds = request.userRoleIds || []
+    const roles = await Promise.all(
+      userRoleIds.map(async (roleId) => {
+        const roleDoc = await db.collection('roles').doc(roleId.trim()).get()
+        return roleDoc.exists ? roleDoc.data() : null
+      })
+    )
+
+    const isAdminOrGestor = roles.some(role =>
+      ['gestor', 'admin', 'superadmin'].includes(role?.slug)
+    )
+
+    if (!isAdminOrGestor && request.userId !== request.params.id) {
+      return response.status(403).json({ error: 'Você não tem permissão para ver a pontuação deste usuário' })
+    }
+
+    const user = await UserModel.getById(request.params.id)
+    if (!user) return response.status(404).json({ error: 'Usuário não encontrado' })
+
+    response.json({
+      userId: user.id,
+      name: user.name,
+      points: user.points ?? 0,
+      level: user.level ?? 'bronze',
+    })
+  } catch (error) {
     response.status(500).json({ error: error.message })
   }
 })
@@ -223,48 +266,6 @@ router.patch('/:id/roles', authMiddleware, isGestor, validate(updateRolesSchema)
     response.status(200).json(result)
   } catch (error) {
     response.status(403).json({ error: error.message })
-  }
-})
-
-router.get('/:id/points', authMiddleware, async(request, response) => {
-  try {
-    // Apenas o próprio usuário ou gestor/admin pode ver
-    const userRoleIds = request.userRoleIds || []
-    const roles = await Promise.all(
-      userRoleIds.map(async (roleId) => {
-        const roleDoc = await db.collection('roles').doc(roleId.trim()).get()
-        return roleDoc.exists ? roleDoc.data() : null
-      })
-    )
-
-    const isAdminOrGestor = roles.some(role =>
-      ['gestor', 'admin', 'superadmin'].includes(role?.slug)
-    )
-
-    if (!isAdminOrGestor && request.userId !== request.params.id) {
-      return response.status(403).json({ error: 'Você não tem permissão para ver a pontuação deste usuário' })
-    }
-
-    const user = await UserModel.getById(request.params.id)
-    if (!user) return response.status(404).json({ error: 'Usuário não encontrado' })
-
-    response.json({
-      userId: user.id,
-      name: user.name,
-      points: user.points ?? 0,
-      level: user.level ?? 'bronze',
-    })
-  } catch (error) {
-    response.status(500).json({ error: error.message })
-  }
-})
-
-router.get('/ranking', async(request, response) => {
-  try {
-    const ranking = await UserModel.getRanking()
-    response.json(ranking)
-  } catch (error) {
-    response.status(500).json({ error: error.message })
   }
 })
 
