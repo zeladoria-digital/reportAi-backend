@@ -4,6 +4,18 @@ const addressCollection = db.collection('address')
 
 const AddressModel = {
     async create(data){
+        // Verifica se já existe um endereço idêntico
+        const existing = await addressCollection
+            .where('cep', '==', data.cep)
+            .where('houseNumber', '==', data.houseNumber)
+            .where('road', '==', data.road)
+            .get()
+
+        if (!existing.empty) {
+            const doc = existing.docs[0]
+            return { id: doc.id, ...doc.data() } // Reutiliza o existente
+        }
+        
         const doc = await addressCollection.add({
             cep: data.cep,
             city: data.city,
