@@ -1,8 +1,21 @@
 const Joi = require('joi')
 
+// 👇 Criamos uma lista com as categorias exatas do seu aplicativo
+const categoriasPermitidas = [
+  'Fossa cheia', 
+  'Vazamento', 
+  'Buraco na via', 
+  'Iluminação', 
+  'Lixo acumulado', 
+  'Árvore caída', 
+  'Perigo', 
+  'Outro'
+];
+
 const citizenComplaintSchema = Joi.object({
-  category: Joi.string().valid('buraco', 'rachadura', 'alagamento', 'outro').required().messages({
-    'any.only': 'Categoria inválida',
+  // 👇 Injetamos a nossa lista aqui
+  category: Joi.string().valid(...categoriasPermitidas).required().messages({
+    'any.only': 'Categoria inválida. Deve ser uma das categorias do app.',
     'any.required': 'Categoria é obrigatória',
   }),
   description: Joi.string().min(10).max(500).required().messages({
@@ -25,16 +38,16 @@ const citizenComplaintSchema = Joi.object({
     longitude: Joi.number().optional(),
   }).required(),
   neighborhood: Joi.string().min(3).max(100).required().messages({
-  'string.min': 'Bairro deve ter no mínimo 3 caracteres',
-  'any.required': 'Bairro é obrigatório',
-}),
+    'string.min': 'Bairro deve ter no mínimo 3 caracteres',
+    'any.required': 'Bairro é obrigatório',
+  }),
 })
 
 const iotComplaintSchema = Joi.object({
   deviceId: Joi.string().required().messages({
     'any.required': 'ID do dispositivo é obrigatório',
   }),
-  category: Joi.string().valid('buraco', 'rachadura', 'alagamento', 'outro').required().messages({
+  category: Joi.string().valid(...categoriasPermitidas).required().messages({
     'any.only': 'Categoria inválida',
     'any.required': 'Categoria é obrigatória',
   }),
