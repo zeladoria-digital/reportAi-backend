@@ -7,7 +7,13 @@ const app = express()
 const PORT = 3000
 
 app.use(cors({
-  origin: 'http://localhost:8081'
+  origin: [
+    'http://localhost:8081',  // ← Expo web (mobile)
+    'http://localhost:5173',  // ← Vite (dashboard web)
+    'http://10.0.0.18:8081', // ← Expo no celular
+  ],
+  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  allowedHeaders: ['Content-Type', 'Authorization'],
 }))
 
 app.use(express.json())
