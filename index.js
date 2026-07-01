@@ -7,7 +7,7 @@ const app = express()
 const PORT = 3000
 
 app.use(cors({
-  origin: 'http://localhost:8081'
+  origin: ['http://localhost:8081', 'http://localhost:5173']
 }))
 
 app.use(express.json())
