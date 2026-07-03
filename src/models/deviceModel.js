@@ -3,14 +3,17 @@ const { db } = require('../config/firebase')
 const devicesCollection = db.collection('iot_devices')
 
 const DeviceModel = {
-  async create(data) {
+async create(data) {
     const doc = await devicesCollection.add({
+      deviceId: data.deviceId || null,           // <-- Adicionado: Pega o ID do Front-end
+      vehiclePlate: data.vehiclePlate || null,   // <-- Adicionado: Pega a Placa do Front-end
+      batteryLevel: data.batteryLevel || null,   // <-- Adicionado: Pega a Bateria
       lastHeartbeat: null,
-      connectionStatus: 'connected',    // enum: connected, disconnected
-      aiModelVersion: data.aiModelVersion,
+      connectionStatus: 'connected',             // enum: connected, disconnected
+      aiModelVersion: data.aiModelVersion || null,
       currentTemperature: null,
       lastMaintenance: null,
-      status: 'active',                 // enum: active, inactive, maintenance
+      status: data.status || 'active',           // <-- Atualizado: Pega o status do Front-end (Online/Offline) ou usa 'active' como padrão
       failureReason: null,
       lastLocation: null,
       createdAt: new Date(),
