@@ -8,7 +8,7 @@ const isAdmin = require('../middlewares/isAdmin')
 const { createFieldTeamSchema, updateFieldTeamSchema, manageMembersSchema } = require('../validators/fieldTeamValidator')
 
 // Lista todas as equipes — gestor e admin
-router.get('/', authMiddleware, isGestor, async(request, response) => {
+router.get('/', authMiddleware, isGestor, isAdmin, async(request, response) => {
   try {
     const teams = await FieldTeamModel.getAll()
     response.json(teams)
@@ -18,7 +18,7 @@ router.get('/', authMiddleware, isGestor, async(request, response) => {
 })
 
 // Busca equipe por ID — gestor e admin
-router.get('/:id', authMiddleware, isGestor, async(request, response) => {
+router.get('/:id', authMiddleware, isGestor, isAdmin, async(request, response) => {
   try {
     const team = await FieldTeamModel.getById(request.params.id)
     if (!team) return response.status(404).json({ error: 'Equipe não encontrada' })

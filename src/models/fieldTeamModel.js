@@ -32,7 +32,7 @@ const FieldTeamModel = {
       createdAt: new Date(),
     })
 
-    return { id: doc.id, ...data, status: 'active' }
+    return { id: doc.id, ...data, status: 'active', memberIds: data.memberIds ?? [] }
   },
 
   async getAll() {

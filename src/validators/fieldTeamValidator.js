@@ -6,8 +6,7 @@ const createFieldTeamSchema = Joi.object({
     'string.max': 'Nome deve ter no máximo 100 caracteres',
     'any.required': 'Nome é obrigatório',
   }),
-  memberIds: Joi.array().items(Joi.string()).min(1).required().messages({
-    'array.min': 'Informe ao menos um membro',
+  memberIds: Joi.array().items(Joi.string()).required().messages({
     'any.required': 'Membros são obrigatórios',
   }),
 })
