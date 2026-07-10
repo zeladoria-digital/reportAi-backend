@@ -124,6 +124,19 @@ const ComplaintModel = {
         throw new Error('Esta denúncia não pode ser alterada')
       }
 
+      // ← Não permite reverter status já definidos
+      if (complaint.status === 'approved') {
+        throw new Error('Denúncia já aprovada e não pode ser alterada')
+      }
+
+      if (complaint.status === 'rejected') {
+        throw new Error('Denúncia já rejeitada e não pode ser alterada')
+      }
+
+      if (['resolved', 'cancelled', 'in_progress'].includes(complaint.status)) {
+        throw new Error('Esta denúncia não pode ser alterada')
+      }
+
       const previousStatus = complaint.status
 
       await complaintsCollection.doc(id).update({

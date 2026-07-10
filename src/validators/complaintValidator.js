@@ -13,14 +13,15 @@ const categoriasPermitidas = [
 ];
 
 const citizenComplaintSchema = Joi.object({
-  // 👇 Injetamos a nossa lista aqui
-  category: Joi.string().valid(...categoriasPermitidas).required().messages({
-    'any.only': 'Categoria inválida. Deve ser uma das categorias do app.',
+  category: Joi.string().valid(
+    'fossa', 'vazamento', 'buraco', 'iluminacao',
+    'lixo', 'arvore', 'perigo', 'rachadura', 'alagamento', 'outro'
+  ).required().messages({
+    'any.only': 'Categoria inválida',
     'any.required': 'Categoria é obrigatória',
   }),
-  description: Joi.string().min(10).max(500).required().messages({
+  description: Joi.string().min(10).max(500).optional().allow('').messages({
     'string.min': 'Descrição deve ter no mínimo 10 caracteres',
-    'any.required': 'Descrição é obrigatória',
   }),
   photoUrl: Joi.string().uri().required().messages({
     'string.uri': 'URL da foto inválida',
@@ -37,10 +38,9 @@ const citizenComplaintSchema = Joi.object({
     latitude: Joi.number().optional(),
     longitude: Joi.number().optional(),
   }).required(),
-  neighborhood: Joi.string().min(3).max(100).required().messages({
-    'string.min': 'Bairro deve ter no mínimo 3 caracteres',
-    'any.required': 'Bairro é obrigatório',
-  }),
+  neighborhood: Joi.string().min(3).max(100).optional().allow(''),
+  tags: Joi.array().items(Joi.string()).optional().default([]),
+  // ← sem status aqui, sempre começa como pending
 })
 
 const iotComplaintSchema = Joi.object({
@@ -63,9 +63,12 @@ const iotComplaintSchema = Joi.object({
 })
 
 const updateStatusSchema = Joi.object({
-  status: Joi.string().valid('pending', 'reviewing', 'resolved', 'rejected').required().messages({
-    'any.only': 'Status inválido',
+  status: Joi.string().valid('approved', 'rejected').required().messages({
+    'any.only': 'Status deve ser approved ou rejected',
     'any.required': 'Status é obrigatório',
+  }),
+  notes: Joi.string().max(500).optional().messages({
+    'string.max': 'Observações devem ter no máximo 500 caracteres',
   }),
 })
 

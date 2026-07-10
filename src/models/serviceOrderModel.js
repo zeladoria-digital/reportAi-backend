@@ -31,7 +31,7 @@ const ServiceOrderModel = {
       complaintId: data.complaintId,
       teamId: data.teamId,
       assignedBy: data.assignedBy,  // ← id do gestor
-      status: 'pending',
+      status: 'in_progress',
       notes: data.notes ?? null,
       createdAt: new Date(),
       updatedAt: new Date(),
@@ -44,7 +44,7 @@ const ServiceOrderModel = {
       updatedAt: new Date(),
     })
 
-    return { id: doc.id, ...data, status: 'pending' }
+    return { id: doc.id, ...data, status: 'in_progress' }
   },
 
   async getAll(filters = {}) {
@@ -54,13 +54,54 @@ const ServiceOrderModel = {
     if (filters.teamId) query = query.where('teamId', '==', filters.teamId)
 
     const snapshot = await query.get()
-    return snapshot.docs.map(doc => ({
-      id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt.toDate().toISOString(),
-      updatedAt: doc.data().updatedAt.toDate().toISOString(),
-      resolvedAt: doc.data().resolvedAt ? doc.data().resolvedAt.toDate().toISOString() : null,
-    }))
+
+    // Mapeia os documentos e busca as relações em paralelo
+    const ordersWithDetails = await Promise.all(
+      snapshot.docs.map(async (doc) => {
+        const data = doc.data()
+
+        // 1. Inicializa os objetos de relacionamento como nulos (caso não existam)
+        let complaintDetails = null
+        let teamDetails = null
+
+        // 2. Busca os dados da Ocorrência relacionada
+        if (data.complaintId) {
+          const complaintDoc = await db.collection('complaints').doc(data.complaintId).get()
+          if (complaintDoc.exists) {
+            const cData = complaintDoc.data()
+            complaintDetails = {
+              category: cData.category,
+              neighborhood: cData.neighborhood || 'Não informado',
+              source: cData.source
+            }
+          }
+        }
+
+        // 3. Busca os dados da Equipe relacionada (ajuste 'teams' se sua coleção tiver outro nome, ex: 'users')
+        if (data.teamId) {
+          const teamDoc = await db.collection('teams').doc(data.teamId).get()
+          if (teamDoc.exists) {
+            const tData = teamDoc.data()
+            teamDetails = {
+              name: tData.name || tData.userName || 'Sem nome'
+            }
+          }
+        }
+
+        // 4. Retorna a ordem de serviço montada iguaizinha ao que o Front-end espera
+        return {
+          id: doc.id,
+          ...data,
+          createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
+          updatedAt: data.updatedAt ? data.updatedAt.toDate().toISOString() : new Date().toISOString(),
+          resolvedAt: data.resolvedAt ? data.resolvedAt.toDate().toISOString() : null,
+          complaint: complaintDetails, // Injeta o objeto mapeado
+          team: teamDetails,           // Injeta o objeto mapeado
+        }
+      })
+    )
+
+    return ordersWithDetails
   },
 
   async getById(id) {
@@ -93,7 +134,21 @@ const ServiceOrderModel = {
     const doc = await serviceOrdersCollection.doc(id).get()
     if (!doc.exists) throw new Error('Ordem de serviço não encontrada')
 
-    const previousStatus = doc.data().status
+    const order = doc.data() // ← adicione essa linha
+    const previousStatus = order.status
+
+    // Não permite alterar ordens já finalizadas
+    if (order.status === 'completed') {
+      throw new Error('Ordem já concluída e não pode ser alterada')
+    }
+
+    if (order.status === 'cancelled') {
+      throw new Error('Ordem já cancelada e não pode ser alterada')
+    }
+
+    if (!['completed', 'cancelled'].includes(status)) {
+      throw new Error('Status deve ser completed ou cancelled')
+    }
 
     const updateData = {
       status,
@@ -104,22 +159,21 @@ const ServiceOrderModel = {
 
     if (status === 'completed') {
       updateData.resolvedAt = new Date()
-      await db.collection('complaints').doc(doc.data().complaintId).update({
-        status: 'resolved',
+      await db.collection('complaints').doc(order.complaintId).update({
+        status: 'resolved', // ← correto
         updatedAt: new Date(),
       })
     }
 
     if (status === 'cancelled') {
-      await db.collection('complaints').doc(doc.data().complaintId).update({
-        status: 'approved',
+      await db.collection('complaints').doc(order.complaintId).update({
+        status: 'cancelled', // ← era 'approved', corrigi para 'cancelled'
         updatedAt: new Date(),
       })
     }
 
     await serviceOrdersCollection.doc(id).update(updateData)
 
-    // Registra o log de auditoria
     if (updatedBy) {
       const userDoc = await db.collection('users').doc(updatedBy).get()
       const userName = userDoc.exists ? userDoc.data().name : 'Desconhecido'
