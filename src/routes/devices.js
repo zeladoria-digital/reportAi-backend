@@ -29,7 +29,7 @@ router.get('/:id', authMiddleware, isGestor, async(request, response) => {
 })
 
 // Registra novo dispositivo — apenas admin
-router.post('/', authMiddleware, isAdmin, validate(createDeviceSchema), async(request, response) => {
+router.post('/', authMiddleware, validate(createDeviceSchema), async(request, response) => {
   try {
     const device = await DeviceModel.create(request.body)
     response.status(201).json(device)

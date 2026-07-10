@@ -13,7 +13,7 @@ app.use(cors({
     'http://10.0.0.18:8081', // ← Expo no celular
   ],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'],
+  allowedHeaders: ['Content-Type', 'Authorization'], // ISSO AQUI É O OURO!
 }))
 
 app.use(express.json())

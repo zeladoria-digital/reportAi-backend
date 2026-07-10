@@ -1,10 +1,16 @@
 const Joi = require('joi')
 
 const createDeviceSchema = Joi.object({
-  aiModelVersion: Joi.string().required().messages({
-    'any.required': 'Versão do modelo IA é obrigatória',
+  deviceId: Joi.string().required().messages({
+    'any.required': 'O ID do dispositivo é obrigatório',
   }),
-})
+  vehiclePlate: Joi.string().required().messages({
+    'any.required': 'A placa do veículo é obrigatória',
+  }),
+  status: Joi.string().optional(),
+  batteryLevel: Joi.string().optional(),
+  aiModelVersion: Joi.string().optional()
+}).unknown(true); // Evita dar erro caso venha algum campo extra do front-end
 
 const updateDeviceSchema = Joi.object({
   aiModelVersion: Joi.string().optional(),
