@@ -159,10 +159,21 @@ const ServiceOrderModel = {
 
     if (status === 'completed') {
       updateData.resolvedAt = new Date()
+      
+      // Busca a denúncia para pegar userId e source
+      const complaintDoc = await db.collection('complaints').doc(order.complaintId).get()
+      const complaint = complaintDoc.data() // ← busca aqui
+
       await db.collection('complaints').doc(order.complaintId).update({
-        status: 'resolved', // ← correto
+        status: 'resolved',
         updatedAt: new Date(),
       })
+
+      // Gamificação — só após buscar a denúncia
+      if (complaint.source === 'citizen' && complaint.userId) {
+        const UserModel = require('./userModel')
+        await UserModel.updatePoints(complaint.userId, 50)
+      }
     }
 
     if (status === 'cancelled') {
@@ -170,13 +181,6 @@ const ServiceOrderModel = {
         status: 'cancelled', // ← era 'approved', corrigi para 'cancelled'
         updatedAt: new Date(),
       })
-    }
-
-    // Gamificação
-    if (complaint.source === 'citizen' && complaint.userId) {
-      const UserModel = require('./userModel')
-      // A única possibilidade de status que dá pontos é completed (ordem concluída)
-      if (status === 'completed') await UserModel.updatePoints(complaint.userId, 50)
     }
 
     await serviceOrdersCollection.doc(id).update(updateData)
