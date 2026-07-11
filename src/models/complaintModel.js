@@ -111,6 +111,7 @@ const ComplaintModel = {
       id: doc.id,
       ...doc.data(),
       createdAt: doc.data().createdAt.toDate().toISOString(),
+      updatedAt: data.updatedAt ? data.updatedAt.toDate().toISOString() : null,
     }
   },
 
@@ -149,8 +150,10 @@ const ComplaintModel = {
       // Gamificação
       if (complaint.source === 'citizen' && complaint.userId) {
         const UserModel = require('./userModel')
+        // A única possibilidade de status que dá pontos é "approved" (denúncia aprovada)
         if (status === 'approved') await UserModel.updatePoints(complaint.userId, 10)
-        if (status === 'resolved') await UserModel.updatePoints(complaint.userId, 50)
+        // Penalização por denúncia rejeitada
+        if (status === 'rejected') await UserModel.updatePoints(complaint.userId, -10)
       }
 
       // Registra o log de auditoria

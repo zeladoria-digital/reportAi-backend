@@ -172,6 +172,13 @@ const ServiceOrderModel = {
       })
     }
 
+    // Gamificação
+    if (complaint.source === 'citizen' && complaint.userId) {
+      const UserModel = require('./userModel')
+      // A única possibilidade de status que dá pontos é completed (ordem concluída)
+      if (status === 'completed') await UserModel.updatePoints(complaint.userId, 50)
+    }
+
     await serviceOrdersCollection.doc(id).update(updateData)
 
     if (updatedBy) {
