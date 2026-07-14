@@ -104,13 +104,18 @@ const ComplaintModel = {
     }))
   },
 
-  async getById(id) {
+async getById(id) {
     const doc = await complaintsCollection.doc(id).get()
     if (!doc.exists) return null
+    
+    // Declaramos a variável data recebendo o conteúdo do documento
+    const data = doc.data() 
+
     return {
       id: doc.id,
-      ...doc.data(),
-      createdAt: doc.data().createdAt.toDate().toISOString(),
+      ...data,
+      // Usamos a variável data de forma segura
+      createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : null,
       updatedAt: data.updatedAt ? data.updatedAt.toDate().toISOString() : null,
     }
   },
