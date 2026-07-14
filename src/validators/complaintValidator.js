@@ -14,12 +14,13 @@ const categoriasPermitidas = [
 
 const citizenComplaintSchema = Joi.object({
   category: Joi.string().valid(
-    'fossa', 'vazamento', 'buraco', 'iluminacao',
-    'lixo', 'arvore', 'perigo', 'rachadura', 'alagamento', 'outro'
+    'Fossa cheia', 'Vazamento', 'Buraco na via', 'Iluminação', 
+    'Lixo acumulado', 'Árvore caída', 'Perigo', 'Outro'
   ).required().messages({
     'any.only': 'Categoria inválida',
     'any.required': 'Categoria é obrigatória',
   }),
+  // ... resto do código
   description: Joi.string().min(10).max(500).optional().allow('').messages({
     'string.min': 'Descrição deve ter no mínimo 10 caracteres',
   }),
