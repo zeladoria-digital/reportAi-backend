@@ -4,7 +4,7 @@ const fieldTeamsCollection = db.collection('field_teams')
 
 const FieldTeamModel = {
   async create(data) {
-    // Verifica se todos os memberIds existem e são field_agents
+    
     if (data.memberIds && data.memberIds.length > 0) {
       for (const memberId of data.memberIds) {
         const userDoc = await db.collection('users').doc(memberId).get()
@@ -12,7 +12,7 @@ const FieldTeamModel = {
 
         const user = userDoc.data()
 
-        // Busca os papéis do usuário
+        
         const roles = await Promise.all(
           user.roleIds.map(async (roleId) => {
             const roleDoc = await db.collection('roles').doc(roleId).get()
@@ -43,7 +43,7 @@ const FieldTeamModel = {
     return Promise.all(snapshot.docs.map(async doc => {
       const data = doc.data()
 
-      // Busca os membros
+      
       if (data.memberIds && data.memberIds.length > 0) {
         const members = await Promise.all(
           data.memberIds.map(async (memberId) => {
@@ -115,14 +115,14 @@ const FieldTeamModel = {
     return { message: 'Equipe inativada com sucesso' }
   },
 
-  // Adiciona membros à equipe
+  
   async addMembers(id, memberIds) {
     const doc = await fieldTeamsCollection.doc(id).get()
     if (!doc.exists) throw new Error('Equipe não encontrada')
 
     const currentMemberIds = doc.data().memberIds ?? []
 
-    // Verifica se são field_agents
+    
     for (const memberId of memberIds) {
       const userDoc = await db.collection('users').doc(memberId).get()
       if (!userDoc.exists) throw new Error(`Usuário '${memberId}' não encontrado`)
@@ -139,7 +139,7 @@ const FieldTeamModel = {
       if (!isFieldAgent) throw new Error(`Usuário '${memberId}' não é um agente de campo`)
     }
 
-    // Evita duplicatas
+    
     const newMemberIds = [...new Set([...currentMemberIds, ...memberIds])]
 
     await fieldTeamsCollection.doc(id).update({
@@ -150,7 +150,7 @@ const FieldTeamModel = {
     return { message: 'Membros adicionados com sucesso', memberIds: newMemberIds }
   },
 
-  // Remove membros da equipe
+  
   async removeMembers(id, memberIds) {
     const doc = await fieldTeamsCollection.doc(id).get()
     if (!doc.exists) throw new Error('Equipe não encontrada')

@@ -5,7 +5,7 @@ const bcrypt = require('bcrypt')
 async function seed() {
   console.log('🌱 Iniciando seed...')
 
-  // Criando papéis
+  
   console.log('Criando papéis...')
   const roles = [
     {
@@ -35,7 +35,7 @@ async function seed() {
     console.log(`✅ Papel '${role.name}' criado: ${doc.id}`)
   }
 
-  // Criando endereços
+  
   console.log('Criando endereços...')
   const addressDoc = await db.collection('address').add({
     cep: '59380-000',
@@ -47,7 +47,7 @@ async function seed() {
   })
   console.log(`✅ Endereço criado: ${addressDoc.id}`)
 
-  // Criando usuários
+  
   console.log('Criando usuários...')
   const users = [
     {

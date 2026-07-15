@@ -10,7 +10,7 @@ const createDeviceSchema = Joi.object({
   status: Joi.string().optional(),
   batteryLevel: Joi.string().optional(),
   aiModelVersion: Joi.string().optional()
-}).unknown(true); // Evita dar erro caso venha algum campo extra do front-end
+}).unknown(true); 
 
 const updateDeviceSchema = Joi.object({
   aiModelVersion: Joi.string().optional(),

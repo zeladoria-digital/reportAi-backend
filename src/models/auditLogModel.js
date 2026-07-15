@@ -5,14 +5,14 @@ const auditLogsCollection = db.collection('audit_logs')
 const AuditLogModel = {
   async create(data) {
     const doc = await auditLogsCollection.add({
-      userId: data.userId,           // quem executou a ação
-      userName: data.userName,       // nome para facilitar leitura
-      action: data.action,           // ex: 'status_changed'
-      entity: data.entity,           // ex: 'complaint', 'service_order'
-      entityId: data.entityId,       // ID do documento alterado
-      previousValue: data.previousValue ?? null, // valor anterior
-      newValue: data.newValue ?? null,           // novo valor
-      description: data.description, // ex: "Alterou status do buraco #102 para Resolvido"
+      userId: data.userId,           
+      userName: data.userName,       
+      action: data.action,           
+      entity: data.entity,           
+      entityId: data.entityId,       
+      previousValue: data.previousValue ?? null, 
+      newValue: data.newValue ?? null,           
+      description: data.description, 
       createdAt: new Date(),
     })
     return { id: doc.id, ...data }

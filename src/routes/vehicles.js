@@ -7,7 +7,7 @@ const isGestor = require('../middlewares/isGestor')
 const isAdmin = require('../middlewares/isAdmin')
 const { createVehicleSchema, updateVehicleSchema } = require('../validators/vehicleValidator')
 
-// Lista todos os veículos — gestor e admin
+
 router.get('/', authMiddleware, isGestor, async(request, response) => {
   try {
     const vehicles = await VehicleModel.getAll()
@@ -17,7 +17,7 @@ router.get('/', authMiddleware, isGestor, async(request, response) => {
   }
 })
 
-// Busca veículo por ID — gestor e admin
+
 router.get('/:id', authMiddleware, isGestor, async(request, response) => {
   try {
     const vehicle = await VehicleModel.getById(request.params.id)
@@ -28,7 +28,7 @@ router.get('/:id', authMiddleware, isGestor, async(request, response) => {
   }
 })
 
-// Cria veículo — apenas admin
+
 router.post('/', authMiddleware, isAdmin, validate(createVehicleSchema), async(request, response) => {
   try {
     const vehicle = await VehicleModel.create(request.body)
@@ -38,7 +38,7 @@ router.post('/', authMiddleware, isAdmin, validate(createVehicleSchema), async(r
   }
 })
 
-// Atualiza veículo — apenas admin
+
 router.put('/:id', authMiddleware, isAdmin, validate(updateVehicleSchema), async(request, response) => {
   try {
     const vehicle = await VehicleModel.update(request.params.id, request.body)
@@ -48,7 +48,7 @@ router.put('/:id', authMiddleware, isAdmin, validate(updateVehicleSchema), async
   }
 })
 
-// Inativa veículo — apenas admin
+
 router.patch('/:id/inactivate', authMiddleware, isAdmin, async(request, response) => {
   try {
     const result = await VehicleModel.inactivate(request.params.id)

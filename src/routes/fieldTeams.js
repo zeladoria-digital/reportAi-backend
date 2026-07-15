@@ -7,7 +7,7 @@ const isGestor = require('../middlewares/isGestor')
 const isAdmin = require('../middlewares/isAdmin')
 const { createFieldTeamSchema, updateFieldTeamSchema, manageMembersSchema } = require('../validators/fieldTeamValidator')
 
-// Lista todas as equipes — gestor e admin
+
 router.get('/', authMiddleware, isGestor, isAdmin, async(request, response) => {
   try {
     const teams = await FieldTeamModel.getAll()
@@ -17,7 +17,7 @@ router.get('/', authMiddleware, isGestor, isAdmin, async(request, response) => {
   }
 })
 
-// Busca equipe por ID — gestor e admin
+
 router.get('/:id', authMiddleware, isGestor, isAdmin, async(request, response) => {
   try {
     const team = await FieldTeamModel.getById(request.params.id)
@@ -28,7 +28,7 @@ router.get('/:id', authMiddleware, isGestor, isAdmin, async(request, response) =
   }
 })
 
-// Cria equipe — apenas admin
+
 router.post('/', authMiddleware, isAdmin, validate(createFieldTeamSchema), async(request, response) => {
   try {
     const team = await FieldTeamModel.create(request.body)
@@ -38,7 +38,7 @@ router.post('/', authMiddleware, isAdmin, validate(createFieldTeamSchema), async
   }
 })
 
-// Atualiza equipe — apenas admin
+
 router.put('/:id', authMiddleware, isAdmin, validate(updateFieldTeamSchema), async(request, response) => {
   try {
     const team = await FieldTeamModel.update(request.params.id, request.body)
@@ -48,7 +48,7 @@ router.put('/:id', authMiddleware, isAdmin, validate(updateFieldTeamSchema), asy
   }
 })
 
-// Adiciona membros — apenas admin
+
 router.patch('/:id/members/add', authMiddleware, isAdmin, validate(manageMembersSchema), async(request, response) => {
   try {
     const result = await FieldTeamModel.addMembers(request.params.id, request.body.memberIds)
@@ -58,7 +58,7 @@ router.patch('/:id/members/add', authMiddleware, isAdmin, validate(manageMembers
   }
 })
 
-// Remove membros — apenas admin
+
 router.patch('/:id/members/remove', authMiddleware, isAdmin, validate(manageMembersSchema), async(request, response) => {
   try {
     const result = await FieldTeamModel.removeMembers(request.params.id, request.body.memberIds)
@@ -68,7 +68,7 @@ router.patch('/:id/members/remove', authMiddleware, isAdmin, validate(manageMemb
   }
 })
 
-// Inativa equipe — apenas admin
+
 router.patch('/:id/inactivate', authMiddleware, isAdmin, async(request, response) => {
   try {
     const result = await FieldTeamModel.inactivate(request.params.id)

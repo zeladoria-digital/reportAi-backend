@@ -4,17 +4,17 @@ const serviceOrdersCollection = db.collection('service_orders')
 
 const ServiceOrderModel = {
   async create(data) {
-    // Verifica se a denúncia existe
+    
     const complaintDoc = await db.collection('complaints').doc(data.complaintId).get()
     if (!complaintDoc.exists) throw new Error('Denúncia não encontrada')
 
-    // Verifica se a denúncia foi aprovada
+    
     const complaint = complaintDoc.data()
     if (complaint.status !== 'approved') {
       throw new Error('Apenas denúncias aprovadas podem gerar ordens de serviço')
     }
 
-    // Verifica se já existe uma ordem para essa denúncia
+    
     const existingOrder = await serviceOrdersCollection
       .where('complaintId', '==', data.complaintId)
       .get()
@@ -22,7 +22,7 @@ const ServiceOrderModel = {
       throw new Error('Já existe uma ordem de serviço para esta denúncia')
     }
 
-    // Verifica se a equipe existe e está ativa
+    
     const teamDoc = await db.collection('field_teams').doc(data.teamId).get()
     if (!teamDoc.exists) throw new Error('Equipe não encontrada')
     if (teamDoc.data().status !== 'active') throw new Error('Equipe inativa')
@@ -30,7 +30,7 @@ const ServiceOrderModel = {
     const doc = await serviceOrdersCollection.add({
       complaintId: data.complaintId,
       teamId: data.teamId,
-      assignedBy: data.assignedBy,  // ← id do gestor
+      assignedBy: data.assignedBy,  
       status: 'in_progress',
       notes: data.notes ?? null,
       createdAt: new Date(),
@@ -38,7 +38,7 @@ const ServiceOrderModel = {
       resolvedAt: null,
     })
 
-    // Atualiza o status da denúncia para 'in_progress'
+    
     await db.collection('complaints').doc(data.complaintId).update({
       status: 'in_progress',
       updatedAt: new Date(),
@@ -55,16 +55,16 @@ const ServiceOrderModel = {
 
     const snapshot = await query.get()
 
-    // Mapeia os documentos e busca as relações em paralelo
+    
     const ordersWithDetails = await Promise.all(
       snapshot.docs.map(async (doc) => {
         const data = doc.data()
 
-        // 1. Inicializa os objetos de relacionamento como nulos (caso não existam)
+        
         let complaintDetails = null
         let teamDetails = null
 
-        // 2. Busca os dados da Ocorrência relacionada
+        
         if (data.complaintId) {
           const complaintDoc = await db.collection('complaints').doc(data.complaintId).get()
           if (complaintDoc.exists) {
@@ -77,7 +77,7 @@ const ServiceOrderModel = {
           }
         }
 
-        // 3. Busca os dados da Equipe relacionada (ajuste 'teams' se sua coleção tiver outro nome, ex: 'users')
+        
         if (data.teamId) {
           const teamDoc = await db.collection('teams').doc(data.teamId).get()
           if (teamDoc.exists) {
@@ -88,15 +88,15 @@ const ServiceOrderModel = {
           }
         }
 
-        // 4. Retorna a ordem de serviço montada iguaizinha ao que o Front-end espera
+        
         return {
           id: doc.id,
           ...data,
           createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : new Date().toISOString(),
           updatedAt: data.updatedAt ? data.updatedAt.toDate().toISOString() : new Date().toISOString(),
           resolvedAt: data.resolvedAt ? data.resolvedAt.toDate().toISOString() : null,
-          complaint: complaintDetails, // Injeta o objeto mapeado
-          team: teamDetails,           // Injeta o objeto mapeado
+          complaint: complaintDetails, 
+          team: teamDetails,           
         }
       })
     )
@@ -110,12 +110,12 @@ const ServiceOrderModel = {
 
     const data = doc.data()
 
-    // Busca a denúncia
+    
     const complaintDoc = await db.collection('complaints').doc(data.complaintId).get()
     data.complaint = complaintDoc.exists ? { id: complaintDoc.id, ...complaintDoc.data() } : null
     delete data.complaintId
 
-    // Busca a equipe
+    
     const teamDoc = await db.collection('field_teams').doc(data.teamId).get()
     data.team = teamDoc.exists ? { id: teamDoc.id, ...teamDoc.data() } : null
     delete data.teamId
@@ -129,15 +129,15 @@ const ServiceOrderModel = {
     }
   },
 
-  // Agente de campo ou gestor atualiza o status
+  
   async updateStatus(id, status, notes = null, updatedBy = null) {
     const doc = await serviceOrdersCollection.doc(id).get()
     if (!doc.exists) throw new Error('Ordem de serviço não encontrada')
 
-    const order = doc.data() // ← adicione essa linha
+    const order = doc.data() 
     const previousStatus = order.status
 
-    // Não permite alterar ordens já finalizadas
+    
     if (order.status === 'completed') {
       throw new Error('Ordem já concluída e não pode ser alterada')
     }
@@ -160,16 +160,16 @@ const ServiceOrderModel = {
     if (status === 'completed') {
       updateData.resolvedAt = new Date()
       
-      // Busca a denúncia para pegar userId e source
+      
       const complaintDoc = await db.collection('complaints').doc(order.complaintId).get()
-      const complaint = complaintDoc.data() // ← busca aqui
+      const complaint = complaintDoc.data() 
 
       await db.collection('complaints').doc(order.complaintId).update({
         status: 'resolved',
         updatedAt: new Date(),
       })
 
-      // Gamificação — só após buscar a denúncia
+      
       if (complaint.source === 'citizen' && complaint.userId) {
         const UserModel = require('./userModel')
         await UserModel.updatePoints(complaint.userId, 50)
@@ -178,7 +178,7 @@ const ServiceOrderModel = {
 
     if (status === 'cancelled') {
       await db.collection('complaints').doc(order.complaintId).update({
-        status: 'cancelled', // ← era 'approved', corrigi para 'cancelled'
+        status: 'cancelled', 
         updatedAt: new Date(),
       })
     }
@@ -204,7 +204,7 @@ const ServiceOrderModel = {
     return { id, status }
   },
 
-  // Agente de campo lista as ordens da sua equipe
+  
   async getByTeamId(teamId) {
     const snapshot = await serviceOrdersCollection
       .where('teamId', '==', teamId)

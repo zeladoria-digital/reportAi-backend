@@ -5,7 +5,7 @@ const complaintsCollection = db.collection('complaints')
 
 const ComplaintModel = {
 
-  // Denúncia do cidadão
+  
   async createFromCitizen(data) {
     if (!data.exif) throw new Error('Metadados da foto são obrigatórios')
 
@@ -18,7 +18,7 @@ const ComplaintModel = {
     const isSameDay =
       photoDate.getDate() === today.getDate() &&
       photoDate.getMonth() === today.getMonth() &&
-      photoDate.getFullYear() === today.getFullYear() // ← estava faltando () aqui
+      photoDate.getFullYear() === today.getFullYear() 
 
     if (!isSameDay) throw new Error('A foto deve ser tirada no momento da denúncia')
 
@@ -26,7 +26,7 @@ const ComplaintModel = {
     if (diffInMinutes > 60) throw new Error('A foto deve ser tirada no momento da denúncia')
 
     const doc = await complaintsCollection.add({
-      source: 'citizen',           // ← origem
+      source: 'citizen',           
       title: data.title,
       description: data.description,
       userId: data.userId || null,
@@ -50,13 +50,13 @@ const ComplaintModel = {
     return { id: doc.id, ...data, source: 'citizen', status: 'pending' }
   },
 
-  // Denúncia do IoT
+  
   async createFromIot(data) {
     const deviceDoc = await db.collection('iot_devices').doc(data.deviceId).get()
     if (!deviceDoc.exists) throw new Error('Dispositivo não encontrado')
 
     const doc = await complaintsCollection.add({
-      source: 'iot',               // ← origem
+      source: 'iot',               
       deviceId: data.deviceId,
       category: data.category,
       photoUrl: data.photoUrl || null,
@@ -73,7 +73,7 @@ const ComplaintModel = {
     return { id: doc.id, ...data, source: 'iot', status: 'pending' }
   },
 
-  // Lista todas — gestor/admin com filtros opcionais
+  
   async getAll(filters = {}) {
     let query = complaintsCollection.orderBy('createdAt', 'desc')
 
@@ -90,7 +90,7 @@ const ComplaintModel = {
     }))
   },
 
-  // Lista apenas as do próprio cidadão
+  
   async getByUserId(userId) {
     const snapshot = await complaintsCollection
       .where('userId', '==', userId)
@@ -108,13 +108,13 @@ async getById(id) {
     const doc = await complaintsCollection.doc(id).get()
     if (!doc.exists) return null
     
-    // Declaramos a variável data recebendo o conteúdo do documento
+    
     const data = doc.data() 
 
     return {
       id: doc.id,
       ...data,
-      // Usamos a variável data de forma segura
+      
       createdAt: data.createdAt ? data.createdAt.toDate().toISOString() : null,
       updatedAt: data.updatedAt ? data.updatedAt.toDate().toISOString() : null,
     }
@@ -130,7 +130,7 @@ async getById(id) {
         throw new Error('Esta denúncia não pode ser alterada')
       }
 
-      // ← Não permite reverter status já definidos
+      
       if (complaint.status === 'approved') {
         throw new Error('Denúncia já aprovada e não pode ser alterada')
       }
@@ -152,16 +152,16 @@ async getById(id) {
         updatedAt: new Date(),
       })
 
-      // Gamificação
+      
       if (complaint.source === 'citizen' && complaint.userId) {
         const UserModel = require('./userModel')
-        // A única possibilidade de status que dá pontos é "approved" (denúncia aprovada)
+        
         if (status === 'approved') await UserModel.updatePoints(complaint.userId, 10)
-        // Penalização por denúncia rejeitada
+        
         if (status === 'rejected') await UserModel.updatePoints(complaint.userId, -10)
       }
 
-      // Registra o log de auditoria
+      
       if (reviewedBy) {
         const userDoc = await db.collection('users').doc(reviewedBy).get()
         const userName = userDoc.exists ? userDoc.data().name : 'Desconhecido'

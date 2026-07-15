@@ -1,6 +1,6 @@
 const Joi = require('joi')
 
-// 👇 Criamos uma lista com as categorias exatas do seu aplicativo
+
 const categoriasPermitidas = [
   'Fossa cheia', 
   'Vazamento', 
@@ -20,7 +20,7 @@ const citizenComplaintSchema = Joi.object({
     'any.only': 'Categoria inválida',
     'any.required': 'Categoria é obrigatória',
   }),
-  // ... resto do código
+  
   description: Joi.string().min(10).max(500).optional().allow('').messages({
     'string.min': 'Descrição deve ter no mínimo 10 caracteres',
   }),
@@ -41,7 +41,7 @@ const citizenComplaintSchema = Joi.object({
   }).required(),
   neighborhood: Joi.string().min(3).max(100).optional().allow(''),
   tags: Joi.array().items(Joi.string()).optional().default([]),
-  // ← sem status aqui, sempre começa como pending
+  
 })
 
 const iotComplaintSchema = Joi.object({

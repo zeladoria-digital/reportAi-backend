@@ -8,7 +8,7 @@ async function isGestor(request, response, next) {
       return response.status(403).json({ error: 'Acesso negado' })
     }
 
-    // Busca os papéis do usuário logado
+    
     const roles = await Promise.all(
       roleIds.map(async (roleId) => {
         const roleDoc = await db.collection('roles').doc(roleId.trim()).get()
@@ -16,7 +16,7 @@ async function isGestor(request, response, next) {
       })
     )
 
-    // Gestor e admin têm acesso
+    
     const hasAccess = roles.some(role =>
       ['gestor', 'admin', 'superadmin'].includes(role?.slug)
     )

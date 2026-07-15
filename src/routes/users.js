@@ -25,7 +25,7 @@ router.post('/login-google', async (req, res) => {
       return res.status(400).json({ error: 'O token do Google é obrigatório.' });
     }
 
-    // CORREÇÃO 1: Usando o 'auth' importado do seu config/firebase
+    
     const decodedToken = await auth.verifyIdToken(idToken);
 
     const dadosSegurosDoGoogle = {
@@ -34,10 +34,10 @@ router.post('/login-google', async (req, res) => {
       email: decodedToken.email
     };
 
-    // Passa os dados para o model fazer o controle de usuário
+    
     const user = await UserModel.loginGoogle(dadosSegurosDoGoogle);
 
-    // CORREÇÃO 2: Gerando o JWT para manter o padrão das outras rotas de login
+    
     const token = jwt.sign(
       {
         id: user.id,
@@ -49,7 +49,7 @@ router.post('/login-google', async (req, res) => {
       { expiresIn: '8h' }
     );
 
-    // Retorna o usuário e o token
+    
     return res.status(200).json({ user, token });
 
   } catch (error) {
@@ -58,7 +58,7 @@ router.post('/login-google', async (req, res) => {
   }
 });
 
-// Login mobile
+
 router.post('/login', validate(loginSchema), async (request, response) => {
   try {
     const { idToken } = request.body
@@ -66,7 +66,7 @@ router.post('/login', validate(loginSchema), async (request, response) => {
     const decodedToken = await auth.verifyIdToken(idToken)
     const uid = decodedToken.uid
 
-    // ← troque usersCollection por db.collection('users')
+    
     const userDoc = await db.collection('users').doc(uid).get()
     if (!userDoc.exists) throw new Error('Usuário não encontrado')
 
@@ -92,7 +92,7 @@ router.post('/login', validate(loginSchema), async (request, response) => {
   }
 })
 
-// Login dashboard
+
 router.post('/login-dashboard', validate(loginSchema), async (request, response) => {
   try {
     const { idToken } = request.body
@@ -100,7 +100,7 @@ router.post('/login-dashboard', validate(loginSchema), async (request, response)
     const decodedToken = await auth.verifyIdToken(idToken)
     const uid = decodedToken.uid
 
-    // ← troque usersCollection por db.collection('users')
+    
     const userDoc = await db.collection('users').doc(uid).get()
     if (!userDoc.exists) throw new Error('Usuário não encontrado')
 
@@ -161,7 +161,7 @@ router.get('/ranking', async(request, response) => {
 
 router.get('/:id/points', authMiddleware, async(request, response) => {
   try {
-    // Apenas o próprio usuário ou gestor/admin pode ver
+    
     const userRoleIds = request.userRoleIds || []
     const roles = await Promise.all(
       userRoleIds.map(async (roleId) => {
@@ -195,7 +195,7 @@ router.get('/:id/points', authMiddleware, async(request, response) => {
 router.get('/:id', authMiddleware, async (request, response) => {
   try {
     const userRoleIds = request.userRoleIds || []
-    // Busca os papéis do usuário logado
+    
     const roles = await Promise.all(
       request.userRoleIds.map(async (roleId) => {
         const roleDoc = await db.collection('roles').doc(roleId).get()
@@ -207,7 +207,7 @@ router.get('/:id', authMiddleware, async (request, response) => {
       ['gestor', 'admin', 'superadmin'].includes(role?.slug)
     )
 
-    // Admin/gestor pode ver qualquer usuário, o resto só o próprio
+    
     if (!isAdminOrGestor && request.userId !== request.params.id) {
       return response.status(403).json({ error: 'Você não tem permissão para visualizar este usuário' })
     }
@@ -224,10 +224,10 @@ router.get('/:id', authMiddleware, async (request, response) => {
   }
 })
 
-// Mudar dados mais flexíveis - Usuário mudando dados de perfil
+
 router.patch('/:id', authMiddleware, validate(updateUserSchema), async (request, response) => {
   try {
-    // Verifica se é o próprio usuário ou um admin
+    
     if (request.userId !== request.params.id)
       return response.status(403).json({ error: 'Você não tem permissão para atualizar este usuário' })
 
@@ -258,7 +258,7 @@ router.patch('/:id/roles', authMiddleware, isGestor, validate(updateRolesSchema)
     const { roleIds } = request.body
 
     const result = await UserModel.updateRoles(
-      request.userId, // Id do admin/gestor que está fazendo a alteração
+      request.userId, 
       request.params.id,
       roleIds
     )

@@ -7,7 +7,7 @@ const isGestor = require('../middlewares/isGestor')
 const isAdmin = require('../middlewares/isAdmin')
 const { createDeviceSchema, updateDeviceSchema, heartbeatSchema } = require('../validators/deviceValidator')
 
-// Lista todos os dispositivos — gestor e admin
+
 router.get('/', authMiddleware, isGestor, async(request, response) => {
   try {
     const devices = await DeviceModel.getAll()
@@ -17,7 +17,7 @@ router.get('/', authMiddleware, isGestor, async(request, response) => {
   }
 })
 
-// Busca dispositivo por ID — gestor e admin
+
 router.get('/:id', authMiddleware, isGestor, async(request, response) => {
   try {
     const device = await DeviceModel.getById(request.params.id)
@@ -28,7 +28,7 @@ router.get('/:id', authMiddleware, isGestor, async(request, response) => {
   }
 })
 
-// Registra novo dispositivo — apenas admin
+
 router.post('/', authMiddleware, validate(createDeviceSchema), async(request, response) => {
   try {
     const device = await DeviceModel.create(request.body)
@@ -38,7 +38,7 @@ router.post('/', authMiddleware, validate(createDeviceSchema), async(request, re
   }
 })
 
-// Atualiza dispositivo — apenas admin
+
 router.put('/:id', authMiddleware, isAdmin, validate(updateDeviceSchema), async(request, response) => {
   try {
     const device = await DeviceModel.update(request.params.id, request.body)
@@ -48,7 +48,7 @@ router.put('/:id', authMiddleware, isAdmin, validate(updateDeviceSchema), async(
   }
 })
 
-// Heartbeat — sem autenticação (enviado pelo hardware)
+
 router.post('/:id/heartbeat', validate(heartbeatSchema), async(request, response) => {
   try {
     const result = await DeviceModel.heartbeat(request.params.id, request.body)

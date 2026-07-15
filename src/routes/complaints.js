@@ -10,10 +10,10 @@ const authMiddleware = require('../middlewares/auth')
 const isGestor = require('../middlewares/isGestor')
 const { citizenComplaintSchema, iotComplaintSchema, updateStatusSchema } = require('../validators/complaintValidator')
 
-// Importamos do Firebase APENAS o banco de dados (db)
+
 const { db } = require('../config/firebase') 
 
-// 🚀 1. Configuração do Cloudinary (Suas chaves já estão aqui!)
+
 cloudinary.config({
   cloud_name: 'duqyxsmmc', 
   api_key: '522575262639688', 
@@ -22,7 +22,7 @@ cloudinary.config({
 
 const upload = multer({ storage: multer.memoryStorage() })
 
-// Drible no Validador
+
 const parseFormData = (req, res, next) => {
   if (req.body.dados) {
     try {
@@ -35,12 +35,12 @@ const parseFormData = (req, res, next) => {
   next();
 };
 
-// Cidadão cria denúncia
+
 router.post('/citizen', authMiddleware, upload.single('foto'), parseFormData, validate(citizenComplaintSchema), async(request, response) => {
   try {
     let finalPhotoUrl = request.body.photoUrl;
 
-    // 🚀 2. Envio da foto pro Cloudinary
+    
     if (request.file) {
       const uploadPromise = new Promise((resolve, reject) => {
         const cld_upload_stream = cloudinary.uploader.upload_stream(
@@ -53,11 +53,11 @@ router.post('/citizen', authMiddleware, upload.single('foto'), parseFormData, va
         streamifier.createReadStream(request.file.buffer).pipe(cld_upload_stream);
       });
 
-      // Aguarda o Cloudinary devolver o link HTTPS definitivo
+      
       finalPhotoUrl = await uploadPromise; 
     }
 
-    // 🚀 3. Salva no banco de dados com a URL real
+    
     const complaint = await ComplaintModel.createFromCitizen({
       ...request.body,
       photoUrl: finalPhotoUrl, 
@@ -71,7 +71,7 @@ router.post('/citizen', authMiddleware, upload.single('foto'), parseFormData, va
   }
 })
 
-// IoT cria denúncia
+
 router.post('/iot', validate(iotComplaintSchema), async(request, response) => {
   try {
     const complaint = await ComplaintModel.createFromIot(request.body)
@@ -81,7 +81,7 @@ router.post('/iot', validate(iotComplaintSchema), async(request, response) => {
   }
 })
 
-// Gestor lista todas
+
 router.get('/', authMiddleware, isGestor, async(request, response) => {
   try {
     const { source, status, category, neighborhood } = request.query
@@ -92,7 +92,7 @@ router.get('/', authMiddleware, isGestor, async(request, response) => {
   }
 })
 
-// Cidadão lista as próprias
+
 router.get('/my', authMiddleware, async(request, response) => {
   try {
     const complaints = await ComplaintModel.getByUserId(request.userId)
@@ -102,7 +102,7 @@ router.get('/my', authMiddleware, async(request, response) => {
   }
 })
 
-// Gestor aprova ou rejeita
+
 router.patch('/:id/review', authMiddleware, isGestor, async(request, response) => {
   try {
     const { status, notes } = request.body
@@ -116,7 +116,7 @@ router.patch('/:id/review', authMiddleware, isGestor, async(request, response) =
   }
 })
 
-// Busca por ID
+
 router.get('/:id', authMiddleware, async(request, response) => {
   try {
     const complaint = await ComplaintModel.getById(request.params.id)

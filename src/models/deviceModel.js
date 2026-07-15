@@ -5,15 +5,15 @@ const devicesCollection = db.collection('iot_devices')
 const DeviceModel = {
 async create(data) {
     const doc = await devicesCollection.add({
-      deviceId: data.deviceId || null,           // <-- Adicionado: Pega o ID do Front-end
-      vehiclePlate: data.vehiclePlate || null,   // <-- Adicionado: Pega a Placa do Front-end
-      batteryLevel: data.batteryLevel || null,   // <-- Adicionado: Pega a Bateria
+      deviceId: data.deviceId || null,           
+      vehiclePlate: data.vehiclePlate || null,   
+      batteryLevel: data.batteryLevel || null,   
       lastHeartbeat: null,
-      connectionStatus: 'connected',             // enum: connected, disconnected
+      connectionStatus: 'connected',             
       aiModelVersion: data.aiModelVersion || null,
       currentTemperature: null,
       lastMaintenance: null,
-      status: data.status || 'active',           // <-- Atualizado: Pega o status do Front-end (Online/Offline) ou usa 'active' como padrão
+      status: data.status || 'active',           
       failureReason: null,
       lastLocation: null,
       createdAt: new Date(),

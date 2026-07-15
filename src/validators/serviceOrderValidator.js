@@ -10,7 +10,7 @@ const createServiceOrderSchema = Joi.object({
   notes: Joi.string().max(500).optional().messages({
     'string.max': 'Observações devem ter no máximo 500 caracteres',
   }),
-  // ← sem status aqui, sempre começa como in_progress
+  
 })
 
 const updateStatusSchema = Joi.object({

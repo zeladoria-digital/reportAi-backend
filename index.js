@@ -8,12 +8,12 @@ const PORT = 3000
 
 app.use(cors({
   origin: [
-    'http://localhost:8081',  // ← Expo web (mobile)
-    'http://localhost:5173',  // ← Vite (dashboard web)
-    'http://10.0.0.18:8081', // ← Expo no celular
+    'http://localhost:8081',  
+    'http://localhost:5173',  
+    'http://10.0.0.18:8081', 
   ],
   methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE'],
-  allowedHeaders: ['Content-Type', 'Authorization'], // ISSO AQUI É O OURO!
+  allowedHeaders: ['Content-Type', 'Authorization'], 
 }))
 
 app.use(express.json())
@@ -38,7 +38,7 @@ app.use('/field-teams', fieldTeamsRoute)
 app.use('/service-orders', serviceOrdersRoute)
 app.use('/audit-logs', auditLogsRoute)
 
-// Rota de exemplo
+
 app.get('/', (req, res) => {
   res.send('Hello World!');
 });
